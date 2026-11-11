@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  org.lumen.installer ("Lumen Installer"): runs on the projector's own XGIMI firmware and starts Lumen OS once as a
+  trial, without a computer. It knows no model: it reads the projector's model code, finds it in the signed list of
+  projectors (devices.json on the release "index" of Project-Lumen-OS/lumen-installer, or in a LumenOS folder) and
+  follows that entry: which release channel, which certificates, what may run on this firmware. It downloads the
+  latest signed release for exactly that model, verifies it on the projector and hands it to the system's trial tool
+  through XGIMI's service access. An ordinary third-party app: no sharedUserId, no platform privileges, its own key.
+  minSdk 29, targetSdk 29: with requestLegacyExternalStorage the storage permission lets it read a LumenOS folder at
+  the root of a USB stick (the release files, verified like a download); the app's own folder on the stick (a download
+  kept there) needs no permission.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lumen.installer"
+    android:versionCode="100"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="29" />
+
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@drawable/icon_installer"
+        android:banner="@drawable/banner_installer"
+        android:allowBackup="false"
+        android:largeHeap="true"
+        android:requestLegacyExternalStorage="true"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- About (the round "i"): versions, projector, what happens, the way back, licenses, project page -->
+        <activity
+            android:name=".AboutActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+
+        <service
+            android:name=".WorkService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+    </application>
+</manifest>

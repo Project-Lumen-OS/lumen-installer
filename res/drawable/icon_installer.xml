@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher icon of Lumen Installer: a play mark over a down arrow (try Lumen OS), on the #17181B Lumen tile. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+    <path android:fillColor="#FF17181B"
+        android:pathData="M58,0 L182,0 A58,58 0 0,1 240,58 L240,182 A58,58 0 0,1 182,240 L58,240 A58,58 0 0,1 0,182 L0,58 A58,58 0 0,1 58,0 Z" />
+    <path android:fillColor="#FFF2B26B" android:pathData="M96,62 L170,106 L96,150 Z" />
+    <path android:strokeColor="#FFF4EFE6" android:strokeWidth="14" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M58,170 L58,186 L182,186 L182,170" />
+</vector>

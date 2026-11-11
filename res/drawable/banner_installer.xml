@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TV launcher banner of Lumen Installer (320x180): the play mark on the Lumen dark tile. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:fillColor="#FF17181B" android:pathData="M0,0 L320,0 L320,180 L0,180 Z" />
+    <path android:fillColor="#FFF2B26B" android:pathData="M136,42 L200,80 L136,118 Z" />
+    <path android:strokeColor="#FFF4EFE6" android:strokeWidth="10" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M108,132 L108,146 L212,146 L212,132" />
+</vector>
