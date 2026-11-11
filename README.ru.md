@@ -9,11 +9,11 @@
 
 ## Как поставить приложение
 
-1. Скачайте `lumen-installer-1.0.apk` в [Releases](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest).
+1. Скачайте `lumen-installer-1.0.1.apk` в [Releases](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest).
 2. Скопируйте его на флешку (FAT32 или exFAT), вставьте флешку в проектор и откройте файл в файловом менеджере XGIMI.
-   Если менеджер не ставит файлы `.apk`, переименуйте файл в `lumen-installer-1.0.apk1` и откройте ещё раз.
+   Если менеджер не ставит файлы `.apk`, переименуйте файл в `lumen-installer-1.0.1.apk1` и откройте ещё раз.
 3. Или через компьютер: включите на проекторе отладку, затем `adb connect <IP проектора>:5555` и
-   `adb install -r lumen-installer-1.0.apk`.
+   `adb install -r lumen-installer-1.0.1.apk`.
 4. Откройте Lumen Installer на проекторе и следуйте подсказкам на экране.
 
 Приложение ставится поверх любой прежней версии Lumen Installer. Какие проекторы и версии прошивки поддерживаются,

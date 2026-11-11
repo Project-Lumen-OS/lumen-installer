@@ -43,7 +43,6 @@
     <string name="msg_index_old">Этот список поддерживаемых проекторов устарел (%1$s). У установщика уже есть более новый (%2$s). Ничего не изменилось.</string>
     <string name="msg_index_note">%2$s</string>
     <string name="msg_unknown_model">Этот проектор пока не поддерживается (%1$s).</string>
-    <string name="msg_beta_only">Для %1$s пока есть только бета Lumen OS. Чтобы попробовать её, выберите Версия: бета.</string>
     <string name="msg_not_yet">%1$s пока не поддерживается. Lumen OS для него ещё нет.</string>
     <string name="msg_computer_only">На %1$s Lumen OS ставится с компьютера, это описано в инструкции. Пробный запуск без компьютера на этой модели невозможен.</string>
     <string name="msg_board_mismatch">Модель %1$s с железом %2$s нам незнакома. Она не поддерживается.</string>
@@ -100,6 +99,7 @@
     <string name="opt_version_beta">Версия: бета</string>
     <string name="opt_version_stable_hint">Проверенный выпуск Lumen OS для этого проектора.</string>
     <string name="opt_version_beta_hint">Более новая тестовая сборка. В ней могут быть ошибки. Проверка подлинности та же.</string>
+    <string name="opt_version_beta_only">Есть только бета-версия</string>
     <string name="confirm_trial_only">На %1$s это только проба. Установка насовсем на этой модели пока закрыта.</string>
     <string name="confirm_space">Нужно места в памяти проектора: %1$s ГБ. Свободно: %2$s ГБ.</string>
     <string name="confirm_stick">Не вынимайте флешку, пока пробный запуск не будет готов.</string>

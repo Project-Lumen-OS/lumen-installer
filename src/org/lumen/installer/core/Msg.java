@@ -11,7 +11,7 @@ public enum Msg {
     NOT_ORANGE(1), STOCK_UNSUPPORTED(2), MODEL_STOCK_UNSUPPORTED(3),
     // the signed list of projectors (Index): not there yet, bad signature or content, older than one already seen;
     // INDEX_NOTE shows the list's own text for this model (English text, Russian text: each language shows its own)
-    INDEX_MISSING(0), INDEX_BAD_SIG(0), INDEX_BAD(1), INDEX_OLD(2), INDEX_NOTE(2), INDEX_LOADING(0), BETA_ONLY(1),
+    INDEX_MISSING(0), INDEX_BAD_SIG(0), INDEX_BAD(1), INDEX_OLD(2), INDEX_NOTE(2), INDEX_LOADING(0),
     // root side: the stock firmware is this model code's own (one firmware may serve several model codes)
     PRODUCT_MISMATCH(3), MODEL_CONFIG_MISSING(1),
     // root side

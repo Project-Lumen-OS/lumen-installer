@@ -97,10 +97,11 @@ public final class Index {
             this.certs = certs; this.message = message; this.isBeta = isBeta;
         }
 
-        /** the channel this entry reads; null for a model with a beta only while Stable is chosen */
+        /** the channel this entry reads; null for the model's own entry of a model with a beta only (Engine.row reads
+         *  such a model through {@link #asBeta()}) */
         public Channel channel() { return isBeta ? beta : stable; }
 
-        /** no stable channel yet: only a beta (read when the user chose Beta) */
+        /** no stable channel yet: only a beta (read without a Version choice) */
         public boolean betaOnly() { return stable == null; }
 
         public boolean hasBeta() { return beta != null && !isBeta; }

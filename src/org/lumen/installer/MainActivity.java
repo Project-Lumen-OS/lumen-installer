@@ -112,8 +112,9 @@ public class MainActivity extends Activity {
             row.addView(stepInfo[i]);
             right.addView(row, lp(0, i == 0 ? 0 : dp(9), 0, 0));
         }
-        // Version: Stable / Beta (a model with a beta channel, download source, before the first step): under the steps,
-        // where the card has room; the line under it says what Beta means
+        // Version: Stable / Beta (a model with a stable and a beta channel, download source, before the first step):
+        // under the steps, where the card has room; the line under it says what the choice means. A model with a beta
+        // only gets one line there instead (no choice: its beta is read)
         version = new LinearLayout(this);
         version.setOrientation(LinearLayout.VERTICAL);
         version.setClipChildren(false);
@@ -185,7 +186,7 @@ public class MainActivity extends Activity {
                     : getString(R.string.device_line, d.name, code, stock));
             boolean loading = d.verdict == Msg.INDEX_MISSING && s.busy && "index".equals(s.task);
             verdict.setText(loading ? msg(Msg.INDEX_LOADING, null) : msg(d.verdict, d.args));
-            verdict.setTextColor(d.ok() ? OK : loading || d.verdict == Msg.INDEX_MISSING || d.verdict == Msg.BETA_ONLY ? WARN : BAD);
+            verdict.setTextColor(d.ok() ? OK : loading || d.verdict == Msg.INDEX_MISSING ? WARN : BAD);
         }
         // the last three messages of this run, newest last (e.g. the release found, the space check, the step result)
         List<Snap.Line> ms = s.messages();
@@ -223,7 +224,6 @@ public class MainActivity extends Activity {
         String key;
         if (s.busy) key = "busy:" + s.task;
         else if (d != null && d.verdict == Msg.INDEX_MISSING) key = "noindex";
-        else if (d != null && d.verdict == Msg.BETA_ONLY) key = "betaonly";
         else if (d == null || !d.ok()) key = "close";
         else if (s.armed) key = "armed";
         else if (s.trial == Engine.Trial.OURS) key = "ours";
@@ -254,11 +254,6 @@ public class MainActivity extends Activity {
             add(R.string.btn_close, v -> finish());
         } else if ("close".equals(key)) {
             first = add(R.string.btn_close, v -> finish());
-        } else if ("betaonly".equals(key)) {
-            // a model with a beta only: the focus on the version choice, which the message asks for
-            add(R.string.btn_close, v -> finish());
-            View vb = version.findViewWithTag("version");
-            first = vb instanceof Button ? (Button) vb : null;
         } else if ("idle".equals(key)) {
             first = add(R.string.btn_prepare, v -> run("prepare"));
             add(R.string.btn_close, v -> finish());
@@ -325,13 +320,15 @@ public class MainActivity extends Activity {
     }
 
     /** The choices, only before the first step ran (nothing to undo then): the source on the left above the buttons;
-     *  in the steps card, where there is room, the version (a model with a beta channel, download source) with a line
-     *  on what it means, and, with a stick in, whether the download goes to the stick. */
+     *  in the steps card, where there is room, the version (a model with a stable and a beta channel, download source)
+     *  with a line on what it means, or for a model with a beta only the line that only a beta exists (no choice), and,
+     *  with a stick in, whether the download goes to the stick. */
     void renderOptions(Snap s, String key) {
-        boolean show = "idle".equals(key) || "continue".equals(key) || "noindex".equals(key) || "betaonly".equals(key);
+        boolean show = "idle".equals(key) || "continue".equals(key) || "noindex".equals(key);
         boolean beta = show && s.source == Engine.Source.NET && s.det != null && s.det.betaOffered;
+        boolean only = show && s.source == Engine.Source.NET && s.det != null && s.det.betaOnly;
         boolean keep = show && s.source == Engine.Source.NET && s.stickPresent;
-        String k = show ? s.source + "|" + s.keepOnStick + "|" + s.stickPresent + "|" + (beta ? s.channel : "-") : "";
+        String k = show ? s.source + "|" + s.keepOnStick + "|" + s.stickPresent + "|" + (beta ? s.channel : only ? "only" : "-") : "";
         if (k.equals(optionsKey)) return;
         optionsKey = k;
         View cur = getCurrentFocus();   // a toggle keeps the focus where it was
@@ -339,7 +336,7 @@ public class MainActivity extends Activity {
         Object tag = cur != null ? cur.getTag() : null;
         options.removeAllViews();
         version.removeAllViews();
-        version.setVisibility(beta || keep ? View.VISIBLE : View.GONE);
+        version.setVisibility(beta || only || keep ? View.VISIBLE : View.GONE);
         if (!show) return;
         addTo(options, s.source == Engine.Source.STICK ? R.string.opt_source_stick : R.string.opt_source_net, v -> {
             if (Snap.I.busy) return;
@@ -373,6 +370,9 @@ public class MainActivity extends Activity {
             if ("version".equals(tag)) focus = b;
             TextView hint = text(getString(s.channel == Engine.Channel.BETA ? R.string.opt_version_beta_hint : R.string.opt_version_stable_hint), 12, DIM);
             version.addView(hint, lp(0, dp(8), 0, 0));
+        } else if (only) {
+            // a model with a beta only: no Stable / Beta choice, one line (the beta is read without a choice)
+            version.addView(text(getString(R.string.opt_version_beta_only), 14, TEXT), lp(0, 0, 0, 0));
         }
         if (keep) {
             Button b = addTo(row(), s.keepOnStick ? R.string.opt_keep_on : R.string.opt_keep_off, v -> {

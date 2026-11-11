@@ -38,7 +38,8 @@ public final class Engine {
     /** where the image comes from: the signed release on GitHub, or a folder of the same files on a USB stick */
     public enum Source { NET, STICK }
     /** which release a download reads ("Version: Stable / Beta", remembered in the state file): the model's stable
-     *  channel, or its beta channel when its entry has one (Index.Entry.asBeta). Beta never applies to a stick folder. */
+     *  channel, or its beta channel when its entry has one (Index.Entry.asBeta). An entry with a beta only has no choice:
+     *  its beta is read whatever is stored. Beta never applies to a stick folder. */
     public enum Channel { STABLE, BETA }
 
     /** the folder on the stick: at its root (needs the storage permission) or in the app's own folder on it */
@@ -75,8 +76,11 @@ public final class Engine {
         public Index.Entry model;
         /** the entry's line for this stock version (trial, install), null when the version is not in it */
         public Index.Stock stockRow;
-        /** the entry has a beta channel and the download source is on: the Version choice is offered */
+        /** the entry has a stable AND a beta channel and the download source is on: the Version choice is offered */
         public boolean betaOffered;
+        /** the entry has a beta channel only and the download source is on: no Version choice, the beta is read
+         *  directly and the screen says that only a beta version exists */
+        public boolean betaOnly;
         public String code = "", board = "", stock = "", name = "";
         /** the serial of the list the verdict came from, 0 = no list */
         public long indexSerial;
@@ -294,7 +298,9 @@ public final class Engine {
         Index ix = currentIndex();
         d.indexSerial = ix == null ? 0 : ix.serial;
         Index.Entry base = ix == null ? null : ix.find(d.code);
-        d.betaOffered = base != null && base.status == Index.Status.SUPPORTED && base.hasBeta() && source() == Source.NET;
+        boolean beta = base != null && base.status == Index.Status.SUPPORTED && base.hasBeta() && source() == Source.NET;
+        d.betaOffered = beta && !base.betaOnly();
+        d.betaOnly = beta && base.betaOnly();
         d.model = row(base);
         d.stockRow = d.model == null ? null : d.model.stock(d.stock);
         d.name = d.model != null ? d.model.name : (d.code.isEmpty() ? "?" : d.code);
@@ -321,9 +327,6 @@ public final class Engine {
             // the list's stock versions of this model code (another one may be a firmware of another model)
             d.verdict = Msg.MODEL_STOCK_UNSUPPORTED;
             d.args = new String[] { code, d.stock.isEmpty() ? "?" : d.stock, join(d.model.stockVersions()) };
-        } else if (source() == Source.NET && d.model.channel() == null) {
-            // a model with a beta only: nothing is read until the user chooses Beta
-            d.verdict = Msg.BETA_ONLY; d.args = new String[] { d.model.name };
         } else if (!"orange".equals(Props.get(p, "ro.boot.verifiedbootstate"))) {
             String v = Props.get(p, "ro.boot.verifiedbootstate");
             d.verdict = Msg.NOT_ORANGE; d.args = new String[] { v.isEmpty() ? "?" : v };
@@ -335,10 +338,12 @@ public final class Engine {
     }
 
     /** The entry a download reads: the model's stable channel, or its beta channel when the user chose Beta and the
-     *  entry has one. A stick folder always uses the stable entry. */
+     *  entry has one. An entry with a beta only reads its beta without a choice. A stick folder always uses the
+     *  model's entry. */
     Index.Entry row(Index.Entry m) {
-        if (m == null || source() != Source.NET || channel() != Channel.BETA || !m.hasBeta()) return m;
-        return m.asBeta();
+        if (m == null || source() != Source.NET || !m.hasBeta()) return m;
+        if (m.betaOnly()) return m.asBeta();
+        return channel() == Channel.BETA ? m.asBeta() : m;
     }
 
     // ------------------------------------------------------------------------------------------------- check
