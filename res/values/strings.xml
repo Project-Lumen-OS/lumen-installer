@@ -8,6 +8,7 @@
     <string name="title">Try Lumen OS</string>
     <string name="working">Getting the Lumen OS trial run ready</string>
     <string name="device_line">%1$s (%2$s), XGIMI firmware %3$s</string>
+    <string name="device_line_short">%1$s, XGIMI firmware %2$s</string>
     <string name="trial_info">Lumen OS starts once as a trial run. Your XGIMI system and your files stay as they are. The next restart after the trial goes back to the XGIMI system. To keep Lumen OS, choose Install inside the trial. During the trial some sound and video may not work yet. While it works, the installer uses the XGIMI service access of the projector. Keep the projector plugged in.</string>
 
     <string name="step_check">Check</string>
@@ -46,6 +47,7 @@
     <string name="msg_index_old">This list of supported projectors is out of date (%1$s). The installer already has a newer one (%2$s). Nothing was changed.</string>
     <string name="msg_index_note">%1$s</string>
     <string name="msg_unknown_model">This projector is not supported yet (%1$s).</string>
+    <string name="msg_beta_only">For %1$s there is only a beta of Lumen OS so far. To try it, choose Version: Beta.</string>
     <string name="msg_not_yet">%1$s is not supported yet. There is no Lumen OS for it so far.</string>
     <string name="msg_computer_only">%1$s needs a computer to install Lumen OS. The guide shows how. A trial without a computer is not possible on this model.</string>
     <string name="msg_board_mismatch">Model %1$s with hardware %2$s is a variant we do not know. It is not supported.</string>

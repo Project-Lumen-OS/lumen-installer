@@ -24,11 +24,12 @@ import java.util.regex.Pattern;
  *           "product": "Product_x" | null, "config_check": true|false,     checked by the root probe
  *           "stock": [{"version": "v1.2.3", "trial": true, "install": true}, ...],
  *           "refused": [{"version": "v1.2.3", "message": {"en": "...", "ru": "..."}}, ...],
- *           "channels": {"stable": CHANNEL, "beta": CHANNEL (optional)},
+ *           "channels": {"stable": CHANNEL, "beta": CHANNEL},               at least one; a model with a beta only
+ *                                                                           is read only when the user chose Beta
  *           "certs": ["-----BEGIN CERTIFICATE-----...", ...]}
  *   CHANNEL {"manifest": "https://.../update-x.json", "device": "x", "channel": "x",
  *            "release": "https://.../tag-{version}/", "image": "name-{version}-nogms-system.img"}
- * A supported entry needs board, stock, channels.stable and certs; the others only model, name and status.
+ * A supported entry needs board, stock, a channel and certs; the others only model, name and status.
  */
 public final class Index {
     public static final String KIND = "lumen-installer-devices";
@@ -96,8 +97,11 @@ public final class Index {
             this.certs = certs; this.message = message; this.isBeta = isBeta;
         }
 
-        /** the channel this entry reads */
+        /** the channel this entry reads; null for a model with a beta only while Stable is chosen */
         public Channel channel() { return isBeta ? beta : stable; }
+
+        /** no stable channel yet: only a beta (read when the user chose Beta) */
+        public boolean betaOnly() { return stable == null; }
 
         public boolean hasBeta() { return beta != null && !isBeta; }
 
@@ -241,8 +245,9 @@ public final class Index {
             }
         }
         Map<String, Object> ch = Json.obj(m.get("channels"), code + " channels");
-        Channel stable = channel(ch.get("stable"), code + " stable", local);
+        Channel stable = ch.get("stable") == null ? null : channel(ch.get("stable"), code + " stable", local);
         Channel beta = ch.get("beta") == null ? null : channel(ch.get("beta"), code + " beta", local);
+        if (stable == null && beta == null) throw new IllegalArgumentException(code + " has no channel");
         List<byte[]> pems = new ArrayList<>();
         for (Object c : Json.arr(m.get("certs"), code + " certs")) {
             if (!(c instanceof String) || !((String) c).startsWith("-----BEGIN CERTIFICATE-----")) throw new IllegalArgumentException(code + " certs");

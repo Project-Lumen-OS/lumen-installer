@@ -179,11 +179,13 @@ public class MainActivity extends Activity {
         seenSeq = s.seq;
         Engine.Detection d = s.det;
         if (d != null) {
-            device.setText(getString(R.string.device_line, d.name, d.code.isEmpty() ? "?" : d.code,
-                    d.stock.isEmpty() ? "?" : d.stock));
+            String code = d.code.isEmpty() ? "?" : d.code, stock = d.stock.isEmpty() ? "?" : d.stock;
+            // the code once: a name from the list may carry it already, an unknown model has only its code
+            device.setText(d.name.contains(code) ? getString(R.string.device_line_short, d.name, stock)
+                    : getString(R.string.device_line, d.name, code, stock));
             boolean loading = d.verdict == Msg.INDEX_MISSING && s.busy && "index".equals(s.task);
             verdict.setText(loading ? msg(Msg.INDEX_LOADING, null) : msg(d.verdict, d.args));
-            verdict.setTextColor(d.ok() ? OK : loading || d.verdict == Msg.INDEX_MISSING ? WARN : BAD);
+            verdict.setTextColor(d.ok() ? OK : loading || d.verdict == Msg.INDEX_MISSING || d.verdict == Msg.BETA_ONLY ? WARN : BAD);
         }
         // the last three messages of this run, newest last (e.g. the release found, the space check, the step result)
         List<Snap.Line> ms = s.messages();
@@ -221,6 +223,7 @@ public class MainActivity extends Activity {
         String key;
         if (s.busy) key = "busy:" + s.task;
         else if (d != null && d.verdict == Msg.INDEX_MISSING) key = "noindex";
+        else if (d != null && d.verdict == Msg.BETA_ONLY) key = "betaonly";
         else if (d == null || !d.ok()) key = "close";
         else if (s.armed) key = "armed";
         else if (s.trial == Engine.Trial.OURS) key = "ours";
@@ -251,6 +254,11 @@ public class MainActivity extends Activity {
             add(R.string.btn_close, v -> finish());
         } else if ("close".equals(key)) {
             first = add(R.string.btn_close, v -> finish());
+        } else if ("betaonly".equals(key)) {
+            // a model with a beta only: the focus on the version choice, which the message asks for
+            add(R.string.btn_close, v -> finish());
+            View vb = version.findViewWithTag("version");
+            first = vb instanceof Button ? (Button) vb : null;
         } else if ("idle".equals(key)) {
             first = add(R.string.btn_prepare, v -> run("prepare"));
             add(R.string.btn_close, v -> finish());
@@ -320,7 +328,7 @@ public class MainActivity extends Activity {
      *  in the steps card, where there is room, the version (a model with a beta channel, download source) with a line
      *  on what it means, and, with a stick in, whether the download goes to the stick. */
     void renderOptions(Snap s, String key) {
-        boolean show = "idle".equals(key) || "continue".equals(key) || "noindex".equals(key);
+        boolean show = "idle".equals(key) || "continue".equals(key) || "noindex".equals(key) || "betaonly".equals(key);
         boolean beta = show && s.source == Engine.Source.NET && s.det != null && s.det.betaOffered;
         boolean keep = show && s.source == Engine.Source.NET && s.stickPresent;
         String k = show ? s.source + "|" + s.keepOnStick + "|" + s.stickPresent + "|" + (beta ? s.channel : "-") : "";

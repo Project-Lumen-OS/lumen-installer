@@ -4,6 +4,7 @@
     <string name="title">Попробовать Lumen OS</string>
     <string name="working">Готовим пробный запуск Lumen OS</string>
     <string name="device_line">%1$s (%2$s), прошивка XGIMI %3$s</string>
+    <string name="device_line_short">%1$s, прошивка XGIMI %2$s</string>
     <string name="trial_info">Lumen OS запустится один раз, на пробу. Система XGIMI и ваши файлы останутся как есть. Следующий перезапуск после пробы вернёт систему XGIMI. Чтобы оставить Lumen OS, выберите «Установить» внутри пробного запуска. В пробном запуске звук и часть видео могут пока не работать. Пока установщик работает, он пользуется сервисным доступом XGIMI на проекторе. Не выключайте проектор из розетки.</string>
 
     <string name="step_check">Проверка</string>
@@ -42,6 +43,7 @@
     <string name="msg_index_old">Этот список поддерживаемых проекторов устарел (%1$s). У установщика уже есть более новый (%2$s). Ничего не изменилось.</string>
     <string name="msg_index_note">%2$s</string>
     <string name="msg_unknown_model">Этот проектор пока не поддерживается (%1$s).</string>
+    <string name="msg_beta_only">Для %1$s пока есть только бета Lumen OS. Чтобы попробовать её, выберите Версия: бета.</string>
     <string name="msg_not_yet">%1$s пока не поддерживается. Lumen OS для него ещё нет.</string>
     <string name="msg_computer_only">На %1$s Lumen OS ставится с компьютера, это описано в инструкции. Пробный запуск без компьютера на этой модели невозможен.</string>
     <string name="msg_board_mismatch">Модель %1$s с железом %2$s нам незнакома. Она не поддерживается.</string>

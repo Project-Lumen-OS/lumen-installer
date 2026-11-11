@@ -321,6 +321,9 @@ public final class Engine {
             // the list's stock versions of this model code (another one may be a firmware of another model)
             d.verdict = Msg.MODEL_STOCK_UNSUPPORTED;
             d.args = new String[] { code, d.stock.isEmpty() ? "?" : d.stock, join(d.model.stockVersions()) };
+        } else if (source() == Source.NET && d.model.channel() == null) {
+            // a model with a beta only: nothing is read until the user chooses Beta
+            d.verdict = Msg.BETA_ONLY; d.args = new String[] { d.model.name };
         } else if (!"orange".equals(Props.get(p, "ro.boot.verifiedbootstate"))) {
             String v = Props.get(p, "ro.boot.verifiedbootstate");
             d.verdict = Msg.NOT_ORANGE; d.args = new String[] { v.isEmpty() ? "?" : v };
@@ -547,14 +550,16 @@ public final class Engine {
             byte[] sums = Bytes.readFile(new File(dirFound, "SHA256SUMS"), 64 * 1024);
             File sf = new File(dirFound, "SHA256SUMS.sig");
             byte[] ssig = sf.canRead() ? Bytes.readFile(sf, 4096) : null;
-            Release.Listed li = Release.onlyImage(sums, ssig, certs, m.stable);
+            // the names of the model's stable channel, or of its beta when it has a beta only (the folder was chosen)
+            Index.Channel sc = m.stable != null ? m.stable : m.beta;
+            Release.Listed li = Release.onlyImage(sums, ssig, certs, sc);
             k.name = li.name;
             k.version = li.version;
             k.sha = li.sha;
             // the folder's channel manifest, when it has one: the stable one, else the beta one (a beta folder)
-            Index.Channel mc = m.stable;
-            File mf = new File(dirFound, m.stable.manifestName());
-            if (!mf.exists() && m.beta != null && new File(dirFound, m.beta.manifestName()).exists()) {
+            Index.Channel mc = sc;
+            File mf = new File(dirFound, sc.manifestName());
+            if (!mf.exists() && m.beta != null && sc != m.beta && new File(dirFound, m.beta.manifestName()).exists()) {
                 mc = m.beta;
                 mf = new File(dirFound, m.beta.manifestName());
             }

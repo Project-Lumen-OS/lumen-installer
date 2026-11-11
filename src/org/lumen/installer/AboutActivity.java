@@ -23,10 +23,11 @@ import java.util.List;
  */
 public class AboutActivity extends Activity {
     LinearLayout col;
+    ScrollView sv;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
-        ScrollView sv = new ScrollView(this);
+        sv = new ScrollView(this);
         sv.setBackgroundColor(Look.BG);
         sv.setDefaultFocusHighlightEnabled(false);
         col = new LinearLayout(this);
@@ -36,7 +37,6 @@ public class AboutActivity extends Activity {
         col.setPadding(dp(56), dp(32), dp(56), dp(32));
         sv.addView(col);
         setContentView(sv);
-        TvFocus.unclip(sv);
         col.addView(Look.text(this, getString(R.string.about_title), 30, Look.TEXT, 700), lp(0, 0, 0, dp(16)));
 
         Snap s = Snap.I;
@@ -84,6 +84,8 @@ public class AboutActivity extends Activity {
         row.addView(back, bp);
         row.addView(det, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)));
         col.addView(row, lp(0, dp(8), 0, 0));
+        // after every view is in place: the row's own padding would cut the focused button's outline otherwise
+        TvFocus.unclip(sv);
         back.post(back::requestFocus);
     }
 
@@ -91,6 +93,13 @@ public class AboutActivity extends Activity {
         Button b = new Button(this);
         b.setText(label);
         TvFocus.button(b);
+        // the buttons are the last row: a focused one scrolls the page to its end, so the outline below it shows too
+        // (the ScrollView alone stops with the button's bottom edge on the screen's edge)
+        View.OnFocusChangeListener grow = b.getOnFocusChangeListener();
+        b.setOnFocusChangeListener((v, has) -> {
+            grow.onFocusChange(v, has);
+            if (has) sv.post(() -> sv.smoothScrollTo(0, col.getHeight()));
+        });
         b.setTextSize(16);
         b.setMinWidth(dp(120));
         b.setPadding(dp(22), 0, dp(22), 0);
