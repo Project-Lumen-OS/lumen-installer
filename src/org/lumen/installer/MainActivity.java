@@ -34,8 +34,8 @@ import java.util.List;
  * One TV screen (D-pad), 960x540 dp: the projector and the verdict on the left with the trial warning and the
  * buttons; the five steps with their progress and the last log lines on the right. Every action that writes outside
  * the app (start the trial, restart, remove the trial) asks first, with Cancel focused. Above the buttons, before a
- * step ran: where the image comes from (download, or a LumenOS folder on a USB stick) and, for a download with a stick
- * in, whether it is kept on the stick (no /data space for it).
+ * step ran: where the image comes from (download, or a LumenOS folder on a USB stick); in the steps card the version
+ * (the catalog's stable build, or its newest beta).
  */
 public class MainActivity extends Activity {
     // Lumen tokens (apps/common/tokens.xml) and the quick-menu look: dark rounded cards, accent #3B78E7
@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
     ProgressBar bar;
     LinearLayout buttons, options, version;
     String buttonKey = "", optionsKey = "";
-    int seenSeq = -1, ticks;
+    int seenSeq = -1;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -116,7 +116,7 @@ public class MainActivity extends Activity {
             row.addView(stepInfo[i]);
             right.addView(row, lp(0, i == 0 ? 0 : dp(9), 0, 0));
         }
-        // Version: Stable / Beta (a model with a stable and a beta channel, download source, before the first step):
+        // Version: Stable / Beta (a model with a stable and a beta build, download source, before the first step):
         // under the steps, where the card has room; the line under it says what the choice means. A model with a beta
         // only gets one line there instead (no choice: its beta is read)
         version = new LinearLayout(this);
@@ -143,15 +143,13 @@ public class MainActivity extends Activity {
         Engine e = WorkService.engine(this);
         if (s.det == null) s.det = e.detect();
         s.source = e.source();
-        // the signed list of projectors: asked for once per start of the app (it says which models exist and what
-        // each may do); the last verified copy is used until it arrives
-        if (!s.indexTried && !s.busy && s.source == ImageSource.NET) {
-            s.indexTried = true;
-            run("index");
+        // the signed catalog: asked for once per start of the app (it lists the models that have a build, and their
+        // builds); the last verified copy is used until it arrives
+        if (!s.catalogTried && !s.busy && s.source == ImageSource.NET) {
+            s.catalogTried = true;
+            run("catalog");
         }
-        s.keepOnStick = e.keepOnStick();
         s.channel = e.channel();
-        s.stickPresent = !new AndroidHost(this).volumes().isEmpty();
         seenSeq = -1;
         render();
         h.post(tick);
@@ -164,10 +162,6 @@ public class MainActivity extends Activity {
 
     final Runnable tick = new Runnable() {
         @Override public void run() {
-            if (++ticks % 10 == 0) {   // a stick put in or taken out while the screen is open
-                boolean in = !new AndroidHost(MainActivity.this).volumes().isEmpty();
-                if (in != Snap.I.stickPresent) { Snap.I.stickPresent = in; Snap.I.seq++; }
-            }
             if (Snap.I.seq != seenSeq) render();
             h.postDelayed(this, 300);
         }
@@ -188,9 +182,9 @@ public class MainActivity extends Activity {
             // the code once: a name from the list may carry it already, an unknown model has only its code
             device.setText(d.name.contains(code) ? getString(R.string.device_line_short, d.name, stock)
                     : getString(R.string.device_line, d.name, code, stock));
-            boolean loading = d.verdict == Msg.INDEX_MISSING && s.busy && "index".equals(s.task);
-            verdict.setText(loading ? msg(Msg.INDEX_LOADING, null) : msg(d.verdict, d.args));
-            verdict.setTextColor(d.ok() ? OK : loading || d.verdict == Msg.INDEX_MISSING ? WARN : BAD);
+            boolean loading = d.verdict == Msg.CATALOG_MISSING && s.busy && "catalog".equals(s.task);
+            verdict.setText(loading ? msg(Msg.CATALOG_LOADING, null) : msg(d.verdict, d.args));
+            verdict.setTextColor(d.ok() ? OK : loading || d.verdict == Msg.CATALOG_MISSING ? WARN : BAD);
         }
         // the last three messages of this run, newest last (e.g. the release found, the space check, the step result)
         List<Snap.Line> ms = s.messages();
@@ -227,12 +221,12 @@ public class MainActivity extends Activity {
         Engine.Detection d = s.det;
         String key;
         if (s.busy) key = "busy:" + s.task;
-        else if (d != null && d.verdict == Msg.INDEX_MISSING) key = "noindex";
+        else if (d != null && d.verdict == Msg.CATALOG_MISSING) key = "nocatalog";
         else if (d == null || !d.ok()) key = "close";
         else if (s.armed) key = "armed";
         else if (s.trial == TrialState.OURS) key = "ours";
         else if (s.trial == TrialState.OTHER) key = "other";
-        else if (s.prepared) key = s.canStart ? "ready" : "pilot";
+        else if (s.prepared && s.canStart) key = "ready";
         else key = s.steps[0] == StepStatus.WAITING ? "idle" : "continue";
         renderOptions(s, key);
         if (key.equals(buttonKey)) { linkFocus(); return; }
@@ -242,15 +236,15 @@ public class MainActivity extends Activity {
         if (key.startsWith("busy")) {
             first = add(R.string.btn_pause, v -> startService(WorkService.task(this, "stop")));
             if ("busy:start".equals(key) || "busy:restart".equals(key) || "busy:remove".equals(key) || "busy:again".equals(key)
-                    || "busy:index".equals(key)) {
-                buttons.removeAllViews();   // root work runs to its end; the list of projectors is a short download
+                    || "busy:catalog".equals(key)) {
+                buttons.removeAllViews();   // root work runs to its end; the catalog is a short download
                 first = null;
             }
-        } else if ("noindex".equals(key)) {
-            // no verified list of projectors yet: ask again (download), or read the LumenOS folder's list (stick)
+        } else if ("nocatalog".equals(key)) {
+            // no verified catalog yet: ask again (download), or read the LumenOS folder's catalog (stick)
             first = add(R.string.btn_retry, v -> {
                 if (Snap.I.busy) return;
-                if (Snap.I.source == ImageSource.NET) { run("index"); return; }
+                if (Snap.I.source == ImageSource.NET) { run("catalog"); return; }
                 Snap.I.det = WorkService.engine(this).detect();
                 Snap.I.seq++;
                 render();
@@ -268,14 +262,12 @@ public class MainActivity extends Activity {
             String keep = getString(s.handover == 1 ? R.string.confirm_keep_yes : R.string.confirm_keep_no);
             String space = s.need.isEmpty() ? "" : " " + getString(R.string.confirm_space, Engine.gb(Engine.parseLongSafe(s.need)),
                     Engine.gb(Engine.parseLongSafe(s.free)));
-            String stick = s.source == ImageSource.STICK || s.keepOnStick ? " " + getString(R.string.confirm_stick) : "";
-            // the list says the install from the trial is not open yet for this model and stock: said before the start
+            String stick = s.source == ImageSource.STICK ? " " + getString(R.string.confirm_stick) : "";
+            // the catalog says the install from the trial is not open for this build and stock: said before the start
             String only = s.trialOnly ? " " + getString(R.string.confirm_trial_only, d.name) : "";
             first = add(R.string.btn_start, v -> confirm(R.string.confirm_start_title,
                     getString(R.string.confirm_start_body) + " " + keep + space + stick + only, R.string.btn_start, () -> run("start")));
             add(R.string.btn_later, v -> finish());
-        } else if ("pilot".equals(key)) {
-            first = add(R.string.btn_close, v -> finish());
         } else if ("armed".equals(key)) {
             first = add(R.string.btn_restart, v -> run("restart"));
             add(R.string.btn_later, v -> finish());
@@ -324,15 +316,14 @@ public class MainActivity extends Activity {
     }
 
     /** The choices, only before the first step ran (nothing to undo then): the source on the left above the buttons;
-     *  in the steps card, where there is room, the version (a model with a stable and a beta channel, download source)
-     *  with a line on what it means, or for a model with a beta only the line that only a beta exists (no choice), and,
-     *  with a stick in, whether the download goes to the stick. */
+     *  in the steps card, where there is room, the version (a model with a stable and a beta build, download source:
+     *  the stable build by default, Beta switches to the newest beta) with a line on what it means, or for a model with
+     *  a beta only the line that only a beta exists (no choice). */
     void renderOptions(Snap s, String key) {
-        boolean show = "idle".equals(key) || "continue".equals(key) || "noindex".equals(key);
+        boolean show = "idle".equals(key) || "continue".equals(key) || "nocatalog".equals(key);
         boolean beta = show && s.source == ImageSource.NET && s.det != null && s.det.betaOffered;
         boolean only = show && s.source == ImageSource.NET && s.det != null && s.det.betaOnly;
-        boolean keep = show && s.source == ImageSource.NET && s.stickPresent;
-        String k = show ? s.source + "|" + s.keepOnStick + "|" + s.stickPresent + "|" + (beta ? s.channel : only ? "only" : "-") : "";
+        String k = show ? s.source + "|" + (beta ? s.channel + s.det.stableVersion + s.det.betaVersion : only ? "only" : "-") : "";
         if (k.equals(optionsKey)) return;
         optionsKey = k;
         View cur = getCurrentFocus();   // a toggle keeps the focus where it was
@@ -340,7 +331,7 @@ public class MainActivity extends Activity {
         Object tag = cur != null ? cur.getTag() : null;
         options.removeAllViews();
         version.removeAllViews();
-        version.setVisibility(beta || only || keep ? View.VISIBLE : View.GONE);
+        version.setVisibility(beta || only ? View.VISIBLE : View.GONE);
         if (!show) return;
         addTo(options, s.source == ImageSource.STICK ? R.string.opt_source_stick : R.string.opt_source_net, v -> {
             if (Snap.I.busy) return;
@@ -358,8 +349,9 @@ public class MainActivity extends Activity {
         });
         View focus = null;
         if (beta) {
-            // Version: Stable (the model's normal releases) or Beta (test builds, the same safety check); remembered
-            Button b = addTo(row(), s.channel == ReleaseChannel.BETA ? R.string.opt_version_beta : R.string.opt_version_stable, v -> {
+            // Version: Stable (the catalog's stable build) or Beta (its newest beta, the same safety check); remembered
+            Button b = addTo(row(), s.channel == ReleaseChannel.BETA ? getString(R.string.opt_version_beta, s.det.betaVersion)
+                    : getString(R.string.opt_version_stable, s.det.stableVersion), v -> {
                 if (Snap.I.busy) return;
                 ReleaseChannel n = Snap.I.channel == ReleaseChannel.BETA ? ReleaseChannel.STABLE : ReleaseChannel.BETA;
                 Engine e = WorkService.engine(this);
@@ -377,19 +369,6 @@ public class MainActivity extends Activity {
         } else if (only) {
             // a model with a beta only: no Stable / Beta choice, one line (the beta is read without a choice)
             version.addView(text(getString(R.string.opt_version_beta_only), 14, TEXT), lp(0, 0, 0, 0));
-        }
-        if (keep) {
-            Button b = addTo(row(), s.keepOnStick ? R.string.opt_keep_on : R.string.opt_keep_off, v -> {
-                if (Snap.I.busy) return;
-                boolean n = !Snap.I.keepOnStick;
-                WorkService.engine(this).setKeepOnStick(n);
-                Snap.I.keepOnStick = n;
-                Snap.I.resetSteps();
-                Snap.I.prepared = false;
-                render();
-            });
-            b.setTag("keep");
-            if ("keep".equals(tag)) focus = b;
         }
         if (focus != null) { final View f = focus; version.post(f::requestFocus); }
         else if (fi >= 0 && fi < options.getChildCount()) { final View f = options.getChildAt(fi); options.post(f::requestFocus); }
@@ -435,8 +414,10 @@ public class MainActivity extends Activity {
 
     Button add(int label, View.OnClickListener l) { return addTo(buttons, label, l); }
 
+    Button addTo(LinearLayout row, int label, View.OnClickListener l) { return addTo(row, getString(label), l); }
+
     /** A TV button in the TvFocus look: accent fill, white outline and 1.04 scale when focused, muted otherwise. */
-    Button addTo(LinearLayout row, int label, View.OnClickListener l) {
+    Button addTo(LinearLayout row, String label, View.OnClickListener l) {
         Button b = new Button(this);
         b.setText(label);
         TvFocus.button(b);

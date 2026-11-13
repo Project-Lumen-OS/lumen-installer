@@ -1,6 +1,6 @@
 package org.lumen.installer.core;
 
-/** which release a download reads ("Version: Stable / Beta", remembered in the state file): the model's stable
- *  channel, or its beta channel when its entry has one (Index.Entry.asBeta). An entry with a beta only has no choice:
- *  its beta is read whatever is stored. Beta never applies to a stick folder. */
+/** which build a download reads ("Version: Stable / Beta", remembered in the state file): the catalog's stable build of
+ *  the model, or its newest beta when it has one. A model with a beta only has no choice: its beta is read whatever
+ *  is stored. A stick folder's file names its own build. */
 public enum ReleaseChannel { STABLE, BETA }

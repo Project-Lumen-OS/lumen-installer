@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">Lumen OS жинақтарының тізімі әлі жоқ. Проекторды интернетке қосып, қайталап көріңіз. Немесе осы тізімі бар LumenOS қалтасын таңдаңыз.</string>
+    <string name="msg_catalog_loading">Осы проекторға арналған Lumen OS жинақтарын іздеп жатырмыз.</string>
+    <string name="msg_catalog_bad_sig">Lumen OS жинақтарының тізімі түпнұсқалық тексеруінен өтпеді. Ештеңе өзгерген жоқ.</string>
+    <string name="msg_catalog_bad">Lumen OS жинақтарының тізімі зақымдалған (%1$s). Ештеңе өзгерген жоқ.</string>
+    <string name="msg_catalog_old">Lumen OS жинақтарының бұл тізімі ескірген (%1$s). Орнатқышта жаңарағы бар (%2$s). Ештеңе өзгерген жоқ.</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">Қазір интернет жоқ. Орнатқыш %1$s күні сақталған жинақтар тізімін көрсетеді.</string>
+    <string name="msg_no_build">Бұл проекторға арналған Lumen OS жинағы әлі жоқ (%1$s). Жаңа жинақтар осында шығады: %2$s</string>
+    <string name="msg_computer_only">%1$s құрылғысына Lumen OS компьютерден орнатылады. Бұл модельде компьютерсіз сынақ іске қосу мүмкін емес. Қалай жасау керегі нұсқаулықта бар: %2$s</string>
+    <string name="msg_catalog_mismatch">Lumen OS шығарылымы жинақтар тізіміне сәйкес келмейді (%1$s). Ештеңе жүктелген жоқ.</string>
+    <string name="msg_stick_not_listed">LumenOS қалтасындағы Lumen OS файлы бұл проекторға арналған ағымдағы жинақ емес. Қалтаға ағымдағы шығарылымның файлдарын көшіріңіз. Ештеңе өзгерген жоқ.</string>
+    <string name="opt_version_stable">Нұсқа: тұрақты %1$s</string>
+    <string name="opt_version_beta">Нұсқа: бета %1$s</string>
+    <string name="opt_version_stable_hint">Осы проекторға арналған тексерілген Lumen OS шығарылымы.</string>
+    <string name="opt_version_beta_hint">Бета сынақ нұсқасы болып табылады. Онда қателер болуы мүмкін. Қауіпсіздік тексеруі сол күйінде.</string>
+    <string name="opt_version_beta_only">Тек бета нұсқасы бар</string>
+    <string name="msg_check_ok_leftovers_kept">Бәрі дұрыс. Шамамен %1$s ГБ бос орын керек, ол бар. XGIMI-дің бұрынғы жаңартуы проектор жадында шамамен %2$s МБ жұмыс файлдарын қалдырған. Lumen OS-тің бұл нұсқасы оларды жоймайды, сондықтан оны осы проекторда сынақ іске қосудан орнату мүмкін емес. Сынақ іске қосу жұмыс істейді. Lumen OS-ті қалдыру үшін нұсқаулықтағы компьютерге арналған орнатқышты пайдаланыңыз.</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">Lumen OS sürümlerinin listesi henüz yok. Projektörü internete bağlayın ve tekrar deneyin. Ya da listeyi içeren bir LumenOS klasörü seçin.</string>
+    <string name="msg_catalog_loading">Bu projektör için Lumen OS sürümleri aranıyor.</string>
+    <string name="msg_catalog_bad_sig">Lumen OS sürümlerinin listesi doğruluk denetiminden geçemedi. Hiçbir şey değişmedi.</string>
+    <string name="msg_catalog_bad">Lumen OS sürümlerinin listesi bozuk (%1$s). Hiçbir şey değişmedi.</string>
+    <string name="msg_catalog_old">Bu Lumen OS sürüm listesi eski (%1$s). Yükleyicide daha yenisi var (%2$s). Hiçbir şey değişmedi.</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">Şu anda internet yok. Yükleyici %1$s tarihinde kaydedilen sürüm listesini gösteriyor.</string>
+    <string name="msg_no_build">Bu projektör için henüz bir Lumen OS sürümü yok (%1$s). Yeni sürümler burada çıkar: %2$s</string>
+    <string name="msg_computer_only">%1$s cihazına Lumen OS bir bilgisayardan yüklenir. Bu modelde bilgisayarsız deneme mümkün değil. Nasıl yapılacağı kılavuzda: %2$s</string>
+    <string name="msg_catalog_mismatch">Lumen OS sürümü, sürüm listesiyle eşleşmiyor (%1$s). Hiçbir şey indirilmedi.</string>
+    <string name="msg_stick_not_listed">LumenOS klasöründeki Lumen OS dosyası bu projektör için güncel bir sürüm değil. Güncel sürümün dosyalarını klasöre kopyalayın. Hiçbir şey değişmedi.</string>
+    <string name="opt_version_stable">Sürüm: Kararlı %1$s</string>
+    <string name="opt_version_beta">Sürüm: Beta %1$s</string>
+    <string name="opt_version_stable_hint">Bu projektör için test edilmiş Lumen OS sürümü.</string>
+    <string name="opt_version_beta_hint">Beta bir deneme sürümüdür. Hatalar içerebilir. Aynı güvenlik denetiminden geçer.</string>
+    <string name="opt_version_beta_only">Yalnızca beta sürümü var</string>
+    <string name="msg_check_ok_leftovers_kept">Her şey yolunda. Yaklaşık %1$s GB boş alan gerekiyor ve bu alan var. Daha önceki bir XGIMI güncellemesi projektörün belleğinde yaklaşık %2$s MB çalışma dosyası bıraktı. Lumen OS\'un bu sürümü bunları silmez, bu yüzden bu projektörde denemeden kurulamaz. Deneme çalışır. Lumen OS\'u kalıcı yapmak için kılavuzdaki bilgisayar yükleyicisini kullanın.</string>
+</resources>

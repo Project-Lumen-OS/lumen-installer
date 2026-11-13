@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">還沒有 Lumen OS 版本清單。請將投影機連上網路後再試一次。或選擇一個含有此清單的 LumenOS 資料夾。</string>
+    <string name="msg_catalog_loading">正在尋找適用於這台投影機的 Lumen OS 版本。</string>
+    <string name="msg_catalog_bad_sig">Lumen OS 版本清單未通過真實性檢查。沒有做任何變更。</string>
+    <string name="msg_catalog_bad">Lumen OS 版本清單已損壞（%1$s）。沒有做任何變更。</string>
+    <string name="msg_catalog_old">此 Lumen OS 版本清單已過期（%1$s）。安裝程式已有較新的清單（%2$s）。沒有做任何變更。</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">目前沒有網路連線。安裝程式顯示的是 %1$s 儲存的版本清單。</string>
+    <string name="msg_no_build">這台投影機還沒有 Lumen OS 版本（%1$s）。新版本會出現在這裡：%2$s</string>
+    <string name="msg_computer_only">%1$s 需要透過電腦安裝 Lumen OS。此型號無法在沒有電腦的情況下試用。安裝指南中有說明：%2$s</string>
+    <string name="msg_catalog_mismatch">Lumen OS 發行版本與版本清單不一致（%1$s）。沒有下載任何內容。</string>
+    <string name="msg_stick_not_listed">LumenOS 資料夾中的 Lumen OS 檔案不是這台投影機的目前版本。請將目前發行版本的檔案複製到該資料夾。沒有做任何變更。</string>
+    <string name="opt_version_stable">版本：穩定版 %1$s</string>
+    <string name="opt_version_beta">版本：測試版 %1$s</string>
+    <string name="opt_version_stable_hint">適用於這台投影機、經過測試的 Lumen OS 版本。</string>
+    <string name="opt_version_beta_hint">測試版是用於測試的版本，可能有錯誤。它通過同樣的安全檢查。</string>
+    <string name="opt_version_beta_only">只有測試版可用</string>
+    <string name="msg_check_ok_leftovers_kept">一切正常。需要約 %1$s GB 可用空間，空間足夠。先前的一次 XGIMI 更新在投影機記憶體中留下了約 %2$s MB 的工作檔案。此版本的 Lumen OS 不會清除這些檔案，因此在這台投影機上無法從試用中安裝。試用可以正常使用。要保留 Lumen OS，請使用安裝指南中的電腦安裝程式。</string>
+</resources>

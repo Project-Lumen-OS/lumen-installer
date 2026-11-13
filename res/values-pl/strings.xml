@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">Listy kompilacji Lumen OS jeszcze nie ma. Podłącz projektor do internetu i spróbuj ponownie. Albo wybierz folder LumenOS, w którym jest ta lista.</string>
+    <string name="msg_catalog_loading">Szukamy kompilacji Lumen OS dla tego projektora.</string>
+    <string name="msg_catalog_bad_sig">Lista kompilacji Lumen OS nie przeszła sprawdzenia autentyczności. Nic nie zostało zmienione.</string>
+    <string name="msg_catalog_bad">Lista kompilacji Lumen OS jest uszkodzona (%1$s). Nic nie zostało zmienione.</string>
+    <string name="msg_catalog_old">Ta lista kompilacji Lumen OS jest nieaktualna (%1$s). Instalator ma już nowszą (%2$s). Nic nie zostało zmienione.</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">Teraz nie ma internetu. Instalator pokazuje listę kompilacji zapisaną %1$s.</string>
+    <string name="msg_no_build">Dla tego projektora nie ma jeszcze kompilacji Lumen OS (%1$s). Nowe kompilacje pojawiają się tutaj: %2$s</string>
+    <string name="msg_computer_only">Na %1$s Lumen OS instaluje się z komputera. Próbne uruchomienie bez komputera nie jest możliwe na tym modelu. Instrukcja pokazuje, jak to zrobić: %2$s</string>
+    <string name="msg_catalog_mismatch">Wydanie Lumen OS nie zgadza się z listą kompilacji (%1$s). Nic nie zostało pobrane.</string>
+    <string name="msg_stick_not_listed">Plik Lumen OS w folderze LumenOS nie jest aktualną kompilacją dla tego projektora. Skopiuj do folderu pliki aktualnego wydania. Nic nie zostało zmienione.</string>
+    <string name="opt_version_stable">Wersja: stabilna %1$s</string>
+    <string name="opt_version_beta">Wersja: beta %1$s</string>
+    <string name="opt_version_stable_hint">Sprawdzone wydanie Lumen OS dla tego projektora.</string>
+    <string name="opt_version_beta_hint">Beta jest wersją testową. Mogą w niej być błędy. Przechodzi to samo sprawdzenie bezpieczeństwa.</string>
+    <string name="opt_version_beta_only">Dostępna jest tylko wersja beta</string>
+    <string name="msg_check_ok_leftovers_kept">Wszystko w porządku. Potrzeba około %1$s GB wolnego miejsca i jest ono dostępne. Wcześniejsza aktualizacja XGIMI zostawiła w pamięci projektora około %2$s MB swoich plików roboczych. Ta wersja Lumen OS ich nie usuwa, dlatego na tym projektorze nie da się jej zainstalować z próbnego uruchomienia. Próbne uruchomienie działa. Aby zostawić Lumen OS, użyj instalatora dla komputera z instrukcji.</string>
+</resources>

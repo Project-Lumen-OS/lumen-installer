@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">还没有 Lumen OS 版本列表。请将投影仪连接到互联网后重试。或者选择一个包含该列表的 LumenOS 文件夹。</string>
+    <string name="msg_catalog_loading">正在查找适用于这台投影仪的 Lumen OS 版本。</string>
+    <string name="msg_catalog_bad_sig">Lumen OS 版本列表未通过真实性检查。没有做任何更改。</string>
+    <string name="msg_catalog_bad">Lumen OS 版本列表已损坏（%1$s）。没有做任何更改。</string>
+    <string name="msg_catalog_old">此 Lumen OS 版本列表已过期（%1$s）。安装程序已有更新的列表（%2$s）。没有做任何更改。</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">现在没有网络连接。安装程序显示的是 %1$s 保存的版本列表。</string>
+    <string name="msg_no_build">这台投影仪还没有 Lumen OS 版本（%1$s）。新版本会出现在这里：%2$s</string>
+    <string name="msg_computer_only">%1$s 需要通过电脑安装 Lumen OS。此型号无法在没有电脑的情况下试用。安装指南中有说明：%2$s</string>
+    <string name="msg_catalog_mismatch">Lumen OS 发布版本与版本列表不一致（%1$s）。没有下载任何内容。</string>
+    <string name="msg_stick_not_listed">LumenOS 文件夹中的 Lumen OS 文件不是这台投影仪的当前版本。请将当前发布版本的文件复制到该文件夹。没有做任何更改。</string>
+    <string name="opt_version_stable">版本：稳定版 %1$s</string>
+    <string name="opt_version_beta">版本：测试版 %1$s</string>
+    <string name="opt_version_stable_hint">适用于这台投影仪、经过测试的 Lumen OS 版本。</string>
+    <string name="opt_version_beta_hint">测试版是用于测试的版本，可能有错误。它通过同样的安全检查。</string>
+    <string name="opt_version_beta_only">只有测试版可用</string>
+    <string name="msg_check_ok_leftovers_kept">一切正常。需要约 %1$s GB 可用空间，空间足够。之前的一次 XGIMI 更新在投影仪内存中留下了约 %2$s MB 的工作文件。此版本的 Lumen OS 不会清除这些文件，因此在这台投影仪上无法从试用中安装。试用可以正常使用。要保留 Lumen OS，请使用安装指南中的电脑安装程序。</string>
+</resources>

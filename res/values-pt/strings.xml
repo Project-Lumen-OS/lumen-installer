@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">A lista de versões do Lumen OS ainda não está aqui. Conecte o projetor à internet e tente de novo. Ou escolha uma pasta LumenOS que tenha a lista.</string>
+    <string name="msg_catalog_loading">Procurando versões do Lumen OS para este projetor.</string>
+    <string name="msg_catalog_bad_sig">A lista de versões do Lumen OS não passou na verificação de autenticidade. Nada foi alterado.</string>
+    <string name="msg_catalog_bad">A lista de versões do Lumen OS está danificada (%1$s). Nada foi alterado.</string>
+    <string name="msg_catalog_old">Esta lista de versões do Lumen OS está desatualizada (%1$s). O instalador já tem uma mais nova (%2$s). Nada foi alterado.</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">Sem internet agora. O instalador mostra a lista de versões salva em %1$s.</string>
+    <string name="msg_no_build">Ainda não há uma versão do Lumen OS para este projetor (%1$s). Novas versões aparecem aqui: %2$s</string>
+    <string name="msg_computer_only">No %1$s, o Lumen OS é instalado por um computador. Neste modelo não é possível testar sem computador. O guia mostra como: %2$s</string>
+    <string name="msg_catalog_mismatch">A versão do Lumen OS não corresponde à lista de versões (%1$s). Nada foi baixado.</string>
+    <string name="msg_stick_not_listed">O arquivo do Lumen OS na pasta LumenOS não é uma versão atual para este projetor. Copie para a pasta os arquivos da versão atual. Nada foi alterado.</string>
+    <string name="opt_version_stable">Versão: estável %1$s</string>
+    <string name="opt_version_beta">Versão: beta %1$s</string>
+    <string name="opt_version_stable_hint">A versão testada do Lumen OS para este projetor.</string>
+    <string name="opt_version_beta_hint">Uma beta é uma versão de teste. Pode ter erros. Passa pela mesma verificação de segurança.</string>
+    <string name="opt_version_beta_only">Só existe uma versão beta</string>
+    <string name="msg_check_ok_leftovers_kept">Tudo certo. São necessários cerca de %1$s GB de espaço livre e eles existem. Uma atualização anterior da XGIMI deixou cerca de %2$s MB dos seus arquivos de trabalho na memória do projetor. Esta versão do Lumen OS não os remove, por isso não pode ser instalada a partir do teste neste projetor. O teste funciona. Para ficar com o Lumen OS, use o instalador para computador do guia.</string>
+</resources>

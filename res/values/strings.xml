@@ -40,15 +40,6 @@
     <string name="confirm_remove_body">The trial files are deleted and the space is free again. The XGIMI system is not changed.</string>
 
     <string name="msg_supported">Lumen OS works on this projector.</string>
-    <string name="msg_index_missing">The list of supported projectors is not here yet. Connect the projector to the internet and choose Try again. Or choose a LumenOS folder that has the list.</string>
-    <string name="msg_index_loading">Looking up which projectors are supported.</string>
-    <string name="msg_index_bad_sig">The list of supported projectors did not pass the authenticity check. Nothing was changed.</string>
-    <string name="msg_index_bad">The list of supported projectors is damaged (%1$s). Nothing was changed.</string>
-    <string name="msg_index_old">This list of supported projectors is out of date (%1$s). The installer already has a newer one (%2$s). Nothing was changed.</string>
-    <string name="msg_index_note">%1$s</string>
-    <string name="msg_unknown_model">This projector is not supported yet (%1$s).</string>
-    <string name="msg_not_yet">%1$s is not supported yet. There is no Lumen OS for it so far.</string>
-    <string name="msg_computer_only">%1$s needs a computer to install Lumen OS. The guide shows how. A trial without a computer is not possible on this model.</string>
     <string name="msg_board_mismatch">Model %1$s with hardware %2$s is a variant we do not know. It is not supported.</string>
     <string name="msg_already_lumen">This projector already runs Lumen OS %1$s. Updates come inside Lumen OS.</string>
     <string name="msg_in_trial">Lumen OS runs as a trial right now. Restart to go back to the XGIMI system, or choose Install inside the trial.</string>
@@ -65,12 +56,10 @@
     <string name="msg_trial_installed">The Lumen OS %1$s trial is ready on this projector. To try a newer build, press Install the new trial.</string>
     <string name="msg_trial_installed_other">Another trial system is on this projector. Please remove it first.</string>
     <string name="msg_check_ok_leftovers">All good. About %1$s GB of free space is needed and it is there. An earlier XGIMI update left about %2$s MB of its working files in the projector\'s memory. The install normally clears them by itself, nothing to do.</string>
+    <string name="msg_check_ok_leftovers_kept">All good. About %1$s GB of free space is needed and it is there. An earlier XGIMI update left about %2$s MB of its working files in the projector\'s memory. This version of Lumen OS does not clear them, so it cannot install itself from the trial on this projector. The trial works. To keep Lumen OS, use the computer installer from the guide.</string>
     <string name="msg_leftovers_stick">An earlier XGIMI update left about %1$s MB of its working files in the projector\'s memory, and something about them is unusual, so Lumen OS will not clear them. Restore the XGIMI system with the recovery USB stick first, then come back here right away. How to make the stick is in the guide on the project page.</string>
     <string name="msg_check_ok">All good. About %1$s GB of free space is needed and it is there.</string>
     <string name="msg_net_failed">Lumen OS could not be reached online (%1$s).</string>
-    <string name="msg_manifest_bad_sig">The Lumen OS release list did not pass the safety check. Nothing was downloaded.</string>
-    <string name="msg_manifest_bad">The Lumen OS release list is damaged (%1$s). Nothing was downloaded.</string>
-    <string name="msg_manifest_wrong_device">The Lumen OS release list is for another projector (%1$s). Nothing was downloaded.</string>
     <string name="msg_sums_bad_sig">The Lumen OS release did not pass the safety check. Nothing was downloaded.</string>
     <string name="msg_sums_no_image">The Lumen OS release has no file for this projector (%1$s). Nothing was downloaded.</string>
     <string name="msg_image_size_bad">The Lumen OS file has an unexpected size (%1$s bytes). Nothing was downloaded.</string>
@@ -83,10 +72,8 @@
     <string name="msg_verified">The safety check passed.</string>
     <string name="msg_handover_yes">This version can install itself from the trial. Choose Install inside the trial.</string>
     <string name="msg_handover_no">Lumen OS %1$s cannot install itself from the trial yet. The trial lets you see Lumen OS. To keep it, use the computer installer from the guide.</string>
-    <string name="msg_handover_unknown">Could not tell whether this version can install itself from the trial.</string>
     <string name="msg_prepared">Lumen OS is prepared for the trial.</string>
     <string name="msg_prepare_failed">Preparing stopped (%1$s).</string>
-    <string name="msg_start_pilot">The trial on the %1$s is not open yet. All steps before this one already work.</string>
     <string name="msg_trial_only">The %1$s can try Lumen OS now. Installing it for good is not open on this model yet, the installer inside the trial will tell you so.</string>
     <string name="msg_not_ready">Please do the steps before this one first.</string>
     <string name="msg_start_failed">The trial was not set up (%1$s). Nothing is left behind. The next restart is the XGIMI system.</string>
@@ -99,13 +86,6 @@
 
     <string name="opt_source_net">Get Lumen OS: download</string>
     <string name="opt_source_stick">Get Lumen OS: USB stick or LumenOS folder</string>
-    <string name="opt_keep_off">Download to the USB stick: no</string>
-    <string name="opt_keep_on">Download to the USB stick: yes</string>
-    <string name="opt_version_stable">Version: Stable</string>
-    <string name="opt_version_beta">Version: Beta</string>
-    <string name="opt_version_stable_hint">The tested Lumen OS release for this projector.</string>
-    <string name="opt_version_beta_hint">A newer test build. It may have bugs. It passes the same safety check.</string>
-    <string name="opt_version_beta_only">Only a beta version is available</string>
     <string name="confirm_trial_only">On the %1$s this is a trial only. Installing for good is not open on this model yet.</string>
     <string name="confirm_space">Space needed in the memory of the projector: %1$s GB. Free: %2$s GB.</string>
     <string name="confirm_stick">Keep the USB stick in until the trial is ready.</string>
@@ -113,11 +93,8 @@
     <string name="msg_stick_no_access">The USB stick cannot be read. Allow access to files when asked. Or put the LumenOS folder into Android/data/org.lumen.installer/files on the stick.</string>
     <string name="msg_stick_found">USB stick: Lumen OS %1$s for this projector, %2$s MB (%3$s).</string>
     <string name="msg_stick_no_image">The release list on the stick names %1$s, but that file is not in the folder.</string>
-    <string name="msg_stick_mismatch">The files on the stick do not belong together. One is for Lumen OS %1$s, the other for %2$s. Nothing was changed.</string>
     <string name="msg_stick_root_unreadable">The Lumen OS file on the stick cannot be read (%1$s). Nothing was changed.</string>
     <string name="msg_from_stick">Lumen OS is read from the USB stick, %1$s MB. No download needed.</string>
-    <string name="msg_no_stick">No USB stick for the download. Put one in, or set Download to the USB stick to no.</string>
-    <string name="msg_stick_no_room">Not enough space on the USB stick. %1$s GB is needed and %2$s GB is free.</string>
 
     <!-- About (the round "i") -->
     <string name="about_title">About</string>
@@ -146,4 +123,22 @@
     <string name="about_log">Details for help</string>
     <string name="about_log_hide">Hide details</string>
     <string name="about_log_empty">Nothing yet.</string>
+
+    <!-- the catalog of builds (1.0.3) and the version choice: these texts in every language of apps/i18n -->
+    <string name="msg_catalog_missing">The list of Lumen OS builds is not here yet. Connect the projector to the internet and choose Try again. Or choose a LumenOS folder that has the list.</string>
+    <string name="msg_catalog_loading">Looking up the Lumen OS builds for this projector.</string>
+    <string name="msg_catalog_bad_sig">The list of Lumen OS builds did not pass the authenticity check. Nothing was changed.</string>
+    <string name="msg_catalog_bad">The list of Lumen OS builds is damaged (%1$s). Nothing was changed.</string>
+    <string name="msg_catalog_old">This list of Lumen OS builds is out of date (%1$s). The installer already has a newer one (%2$s). Nothing was changed.</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">No internet connection right now. The installer shows the list of builds it saved on %1$s.</string>
+    <string name="msg_no_build">There is no Lumen OS build for this projector yet (%1$s). New builds appear here: %2$s</string>
+    <string name="msg_computer_only">%1$s gets Lumen OS from a computer. A trial without a computer is not possible on this model. The guide shows how: %2$s</string>
+    <string name="msg_catalog_mismatch">The Lumen OS release does not match the list of builds (%1$s). Nothing was downloaded.</string>
+    <string name="msg_stick_not_listed">The Lumen OS file in the LumenOS folder is not a current build for this projector. Copy the files of the current release into the folder. Nothing was changed.</string>
+    <string name="opt_version_stable">Version: Stable %1$s</string>
+    <string name="opt_version_beta">Version: Beta %1$s</string>
+    <string name="opt_version_stable_hint">The tested Lumen OS release for this projector.</string>
+    <string name="opt_version_beta_hint">A beta is a test version. It may have bugs. It passes the same safety check.</string>
+    <string name="opt_version_beta_only">Only a beta version is available</string>
 </resources>

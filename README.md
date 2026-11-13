@@ -1,8 +1,8 @@
 # Lumen Installer
 
 An app for XGIMI projectors that brings [Lumen OS](https://github.com/Project-Lumen-OS/lumen-os) to the projector
-without a computer. It reads the projector's model, looks it up in the signed list of supported projectors and
-downloads the latest Lumen OS release for exactly that model. Every file is checked against its signature on the
+without a computer. It reads the projector's model and looks it up in the signed list of Lumen OS builds. If a build
+for that model is published, the app offers it: the stable version, or the newest beta if you choose Beta. Every file is checked against its signature on the
 projector before it is used. You can try Lumen OS first: the XGIMI system and your files stay as they are.
 
 [Русская версия](README.ru.md)
@@ -16,9 +16,10 @@ projector before it is used. You can try Lumen OS first: the XGIMI system and yo
    `adb install -r` with the `.apk` file from the same release.
 3. Open Lumen Installer on the projector and follow the screen.
 
-The app updates over any earlier Lumen Installer. Which projectors and firmware versions are supported is decided by
-the signed list on the [index release](https://github.com/Project-Lumen-OS/lumen-installer/releases/tag/index), not
-by the app. A projector that is not on the list is not touched.
+The app updates over any earlier Lumen Installer. Which projectors and firmware versions get Lumen OS is decided by
+the signed list of builds on the [index release](https://github.com/Project-Lumen-OS/lumen-installer/releases/tag/index),
+made from the published [Lumen OS releases](https://github.com/Project-Lumen-OS/lumen-os/releases), not by the app.
+When a build for a new projector is published, the same app offers it. A projector without a build is not touched.
 
 ## Build
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">Lumen OS 빌드 목록이 아직 없습니다. 프로젝터를 인터넷에 연결한 뒤 다시 시도하세요. 또는 목록이 들어 있는 LumenOS 폴더를 선택하세요.</string>
+    <string name="msg_catalog_loading">이 프로젝터용 Lumen OS 빌드를 찾고 있습니다.</string>
+    <string name="msg_catalog_bad_sig">Lumen OS 빌드 목록이 진위 확인을 통과하지 못했습니다. 아무것도 바뀌지 않았습니다.</string>
+    <string name="msg_catalog_bad">Lumen OS 빌드 목록이 손상되었습니다(%1$s). 아무것도 바뀌지 않았습니다.</string>
+    <string name="msg_catalog_old">이 Lumen OS 빌드 목록은 오래되었습니다(%1$s). 설치 프로그램에 더 새로운 목록이 있습니다(%2$s). 아무것도 바뀌지 않았습니다.</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">지금은 인터넷에 연결되어 있지 않습니다. %1$s에 저장한 빌드 목록을 보여 줍니다.</string>
+    <string name="msg_no_build">이 프로젝터용 Lumen OS 빌드는 아직 없습니다(%1$s). 새 빌드는 여기에 올라옵니다: %2$s</string>
+    <string name="msg_computer_only">%1$s에는 컴퓨터로 Lumen OS를 설치합니다. 이 모델에서는 컴퓨터 없이 체험할 수 없습니다. 방법은 가이드에 있습니다: %2$s</string>
+    <string name="msg_catalog_mismatch">Lumen OS 릴리스가 빌드 목록과 맞지 않습니다(%1$s). 아무것도 내려받지 않았습니다.</string>
+    <string name="msg_stick_not_listed">LumenOS 폴더의 Lumen OS 파일은 이 프로젝터의 현재 빌드가 아닙니다. 현재 릴리스의 파일을 폴더에 복사하세요. 아무것도 바뀌지 않았습니다.</string>
+    <string name="opt_version_stable">버전: 안정판 %1$s</string>
+    <string name="opt_version_beta">버전: 베타 %1$s</string>
+    <string name="opt_version_stable_hint">이 프로젝터용으로 검증된 Lumen OS 릴리스입니다.</string>
+    <string name="opt_version_beta_hint">베타는 테스트 버전입니다. 오류가 있을 수 있습니다. 같은 안전 확인을 거칩니다.</string>
+    <string name="opt_version_beta_only">베타 버전만 있습니다</string>
+    <string name="msg_check_ok_leftovers_kept">문제없습니다. 여유 공간이 약 %1$s GB 필요하며 충분합니다. 이전 XGIMI 업데이트가 프로젝터 메모리에 약 %2$s MB의 작업 파일을 남겼습니다. 이 버전의 Lumen OS는 이 파일을 지우지 않으므로 이 프로젝터에서는 체험에서 설치할 수 없습니다. 체험은 작동합니다. Lumen OS를 유지하려면 가이드의 컴퓨터용 설치 프로그램을 사용하세요.</string>
+</resources>

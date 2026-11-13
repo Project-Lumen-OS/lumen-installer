@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">L\'elenco delle versioni di Lumen OS non è ancora qui. Collega il proiettore a internet e riprova. Oppure scegli una cartella LumenOS che contiene l\'elenco.</string>
+    <string name="msg_catalog_loading">Ricerca delle versioni di Lumen OS per questo proiettore.</string>
+    <string name="msg_catalog_bad_sig">L\'elenco delle versioni di Lumen OS non ha superato il controllo di autenticità. Non è stato cambiato nulla.</string>
+    <string name="msg_catalog_bad">L\'elenco delle versioni di Lumen OS è danneggiato (%1$s). Non è stato cambiato nulla.</string>
+    <string name="msg_catalog_old">Questo elenco delle versioni di Lumen OS non è aggiornato (%1$s). Il programma di installazione ne ha già uno più recente (%2$s). Non è stato cambiato nulla.</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">Al momento non c\'è connessione a internet. Il programma mostra l\'elenco delle versioni salvato il %1$s.</string>
+    <string name="msg_no_build">Per questo proiettore non c\'è ancora una versione di Lumen OS (%1$s). Le nuove versioni compaiono qui: %2$s</string>
+    <string name="msg_computer_only">Sul %1$s Lumen OS si installa da un computer. Su questo modello una prova senza computer non è possibile. La guida spiega come fare: %2$s</string>
+    <string name="msg_catalog_mismatch">La versione di Lumen OS non corrisponde all\'elenco delle versioni (%1$s). Non è stato scaricato nulla.</string>
+    <string name="msg_stick_not_listed">Il file di Lumen OS nella cartella LumenOS non è una versione attuale per questo proiettore. Copia nella cartella i file della versione attuale. Non è stato cambiato nulla.</string>
+    <string name="opt_version_stable">Versione: stabile %1$s</string>
+    <string name="opt_version_beta">Versione: beta %1$s</string>
+    <string name="opt_version_stable_hint">La versione collaudata di Lumen OS per questo proiettore.</string>
+    <string name="opt_version_beta_hint">Una beta è una versione di prova. Può avere errori. Supera lo stesso controllo di sicurezza.</string>
+    <string name="opt_version_beta_only">È disponibile solo una versione beta</string>
+    <string name="msg_check_ok_leftovers_kept">Tutto a posto. Servono circa %1$s GB di spazio libero e ci sono. Un aggiornamento XGIMI precedente ha lasciato circa %2$s MB dei suoi file di lavoro nella memoria del proiettore. Questa versione di Lumen OS non li rimuove, quindi su questo proiettore non può installarsi dalla prova. La prova funziona. Per tenere Lumen OS, usa il programma di installazione per computer della guida.</string>
+</resources>

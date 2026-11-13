@@ -27,9 +27,8 @@ import java.util.List;
 /**
  * Runs the engine off the UI thread, in the foreground (a 1 GB download must survive the screen going to the
  * launcher). One task at a time; the activity reads {@link Snap}.
- *   index    download the signed list of projectors again (at the app's start and on Try again)
- *   prepare  check + download + verify + prepare (never writes outside the app's own folders: its dir on /data,
- *            and with "keep on stick" its own folder on the USB stick)
+ *   catalog  download the signed catalog of builds again (at the app's start and on Try again)
+ *   prepare  check + download + verify + prepare (never writes outside the app's own dir on /data)
  *   start    the same (each step returns at once when already done) + start: gsi_tool install + enable
  *   again    gsi_tool enable --single-boot for an installed trial
  *   remove   gsi_tool wipe
@@ -47,7 +46,8 @@ public class WorkService extends Service {
         if (engine == null) {
             final Context app = c.getApplicationContext();
             Engine.Config cfg = new Engine.Config();
-            cfg.indexCerts = indexCerts(app);
+            cfg.catalogCerts = catalogCerts(app);
+            cfg.lang = lang(java.util.Locale.getDefault());
             engine = new Engine(new AndroidHost(app), cfg, new Engine.Listener() {
                 @Override public void step(InstallStep s, StepStatus st) { Snap.I.step(s, st); }
                 @Override public void message(Msg m, String... args) { Snap.I.message(m, args); }
@@ -58,9 +58,16 @@ public class WorkService extends Service {
         return engine;
     }
 
-    /** The certificates of the signed list of projectors (assets/index/*.x509.pem): the only certificates in the app.
-     *  Every model's own certificates come from its entry in that list. Empty = nothing verifies. */
-    static List<X509Certificate> indexCerts(Context app) {
+    /** the language key of the catalog's texts: "zh-rCN" / "zh-rTW" for Chinese, else the language ("pt", "ru") */
+    static String lang(java.util.Locale l) {
+        String lg = l.getLanguage();
+        if ("zh".equals(lg)) return "TW".equals(l.getCountry()) || "Hant".equals(l.getScript()) ? "zh-rTW" : "zh-rCN";
+        return lg;
+    }
+
+    /** The certificates of the signed catalog (assets/index/*.x509.pem): the only certificates in the app.
+     *  Every model's own certificates come from its entry in the catalog. Empty = nothing verifies. */
+    static List<X509Certificate> catalogCerts(Context app) {
         List<byte[]> pems = new ArrayList<>();
         try {
             String[] names = app.getAssets().list("index");
@@ -106,14 +113,13 @@ public class WorkService extends Service {
         try {
             e.resetStop();
             Snap.I.det = e.detect();
-            if ("index".equals(t)) {
-                if (e.source() == ImageSource.NET) e.refreshIndex();
+            if ("catalog".equals(t)) {
+                if (e.source() == ImageSource.NET) e.refreshCatalog();
                 Snap.I.det = e.detect();
             } else if ("prepare".equals(t)) {
                 Snap.I.resetSteps();
                 Snap.I.prepared = e.prepareAll();
-                if (Snap.I.prepared && !e.canStart()) Snap.I.message(Msg.START_PILOT, new String[] { e.det.name });
-                else if (Snap.I.prepared && e.trialOnly()) Snap.I.message(Msg.TRIAL_ONLY, new String[] { e.det.name });
+                if (Snap.I.prepared && e.trialOnly()) Snap.I.message(Msg.TRIAL_ONLY, new String[] { e.det.name });
             } else if ("start".equals(t)) {
                 Snap.I.armed = e.prepareAll() && e.start();
                 Snap.I.prepared = false;
@@ -134,7 +140,6 @@ public class WorkService extends Service {
             Snap.I.need = e.state("need.bytes");
             Snap.I.free = e.state("free.bytes");
             Snap.I.source = e.source();
-            Snap.I.keepOnStick = e.keepOnStick();
             Snap.I.channel = e.channel();
             if (Snap.I.prepared) Snap.I.handover = e.handover();
         } catch (RuntimeException ex) {

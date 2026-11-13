@@ -35,14 +35,13 @@ final class Snap {
     volatile TrialState trial = TrialState.NONE;
     volatile Engine.Detection det;
     volatile String need = "", free = "";
-    /** the image source (download or USB stick folder), the keep-on-stick choice, and whether a stick is in */
+    /** the image source (download or a LumenOS folder on a USB stick) */
     volatile ImageSource source = ImageSource.NET;
-    volatile boolean keepOnStick, stickPresent;
-    /** Version: Stable or Beta (download source, a model with a beta channel) */
+    /** Version: Stable or Beta (download source, a model with a stable and a beta build) */
     volatile ReleaseChannel channel = ReleaseChannel.STABLE;
-    /** the list of projectors was asked for once since the app started */
-    volatile boolean indexTried;
-    /** can the downloaded release install itself from the trial: 1 yes, 0 no, -1 unknown */
+    /** the catalog was asked for once since the app started */
+    volatile boolean catalogTried;
+    /** does the build install itself from the trial on this stock version: 1 yes, 0 no, -1 not checked yet */
     volatile int handover = -1;
 
     Snap() { resetSteps(); }

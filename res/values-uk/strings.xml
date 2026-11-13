@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">Списку збірок Lumen OS ще немає. Підключіть проєктор до інтернету і спробуйте ще раз. Або виберіть папку LumenOS, у якій є цей список.</string>
+    <string name="msg_catalog_loading">Шукаємо збірки Lumen OS для цього проєктора.</string>
+    <string name="msg_catalog_bad_sig">Список збірок Lumen OS не пройшов перевірку справжності. Нічого не змінилося.</string>
+    <string name="msg_catalog_bad">Список збірок Lumen OS пошкоджено (%1$s). Нічого не змінилося.</string>
+    <string name="msg_catalog_old">Цей список збірок Lumen OS застарів (%1$s). В інсталятора вже є новіший (%2$s). Нічого не змінилося.</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">Зараз немає інтернету. Інсталятор показує список збірок, збережений %1$s.</string>
+    <string name="msg_no_build">Для цього проєктора ще немає збірки Lumen OS (%1$s). Нові збірки з\'являються тут: %2$s</string>
+    <string name="msg_computer_only">%1$s отримує Lumen OS з комп\'ютера. Пробний запуск без комп\'ютера на цій моделі неможливий. Як це зробити, описано в інструкції: %2$s</string>
+    <string name="msg_catalog_mismatch">Випуск Lumen OS не збігається зі списком збірок (%1$s). Нічого не завантажено.</string>
+    <string name="msg_stick_not_listed">Файл Lumen OS у папці LumenOS не є поточною збіркою для цього проєктора. Скопіюйте в папку файли поточного випуску. Нічого не змінилося.</string>
+    <string name="opt_version_stable">Версія: стабільна %1$s</string>
+    <string name="opt_version_beta">Версія: бета %1$s</string>
+    <string name="opt_version_stable_hint">Перевірений випуск Lumen OS для цього проєктора.</string>
+    <string name="opt_version_beta_hint">Бета є тестовою версією. У ній можуть бути помилки. Перевірка безпеки та сама.</string>
+    <string name="opt_version_beta_only">Є тільки бета-версія</string>
+    <string name="msg_check_ok_leftovers_kept">Усе гаразд. Потрібно близько %1$s ГБ вільного місця, і воно є. Попереднє оновлення XGIMI залишило в пам\'яті проєктора близько %2$s МБ своїх робочих файлів. Ця версія Lumen OS їх не прибирає, тому встановити її з пробного запуску на цьому проєкторі не можна. Пробний запуск працює. Щоб залишити Lumen OS, скористайтеся інсталятором для комп\'ютера з інструкції.</string>
+</resources>

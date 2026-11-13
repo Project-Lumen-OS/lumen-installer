@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">Lumen OS のビルド一覧がまだありません。プロジェクターをインターネットにつないで、もう一度お試しください。または、一覧が入った LumenOS フォルダーを選んでください。</string>
+    <string name="msg_catalog_loading">このプロジェクター向けの Lumen OS ビルドを探しています。</string>
+    <string name="msg_catalog_bad_sig">Lumen OS のビルド一覧が真正性の確認を通りませんでした。何も変更されていません。</string>
+    <string name="msg_catalog_bad">Lumen OS のビルド一覧が壊れています（%1$s）。何も変更されていません。</string>
+    <string name="msg_catalog_old">この Lumen OS のビルド一覧は古くなっています（%1$s）。インストーラーには新しい一覧があります（%2$s）。何も変更されていません。</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">現在インターネットに接続できません。%1$s に保存したビルド一覧を表示しています。</string>
+    <string name="msg_no_build">このプロジェクター向けの Lumen OS ビルドはまだありません（%1$s）。新しいビルドはここに公開されます：%2$s</string>
+    <string name="msg_computer_only">%1$s ではパソコンから Lumen OS をインストールします。このモデルではパソコンなしの試用はできません。方法はガイドにあります：%2$s</string>
+    <string name="msg_catalog_mismatch">Lumen OS のリリースがビルド一覧と一致しません（%1$s）。何もダウンロードされていません。</string>
+    <string name="msg_stick_not_listed">LumenOS フォルダーの Lumen OS ファイルは、このプロジェクターの現在のビルドではありません。現在のリリースのファイルをフォルダーにコピーしてください。何も変更されていません。</string>
+    <string name="opt_version_stable">バージョン：安定版 %1$s</string>
+    <string name="opt_version_beta">バージョン：ベータ版 %1$s</string>
+    <string name="opt_version_stable_hint">このプロジェクター向けの、テスト済みの Lumen OS リリースです。</string>
+    <string name="opt_version_beta_hint">ベータ版はテスト用のバージョンです。不具合がある場合があります。安全確認は同じです。</string>
+    <string name="opt_version_beta_only">ベータ版のみがあります</string>
+    <string name="msg_check_ok_leftovers_kept">問題ありません。約 %1$s GB の空き容量が必要で、足りています。以前の XGIMI アップデートが、プロジェクターのメモリーに約 %2$s MB の作業ファイルを残しています。このバージョンの Lumen OS はそれを削除しないため、このプロジェクターでは試用からインストールできません。試用は使えます。Lumen OS を残すには、ガイドにあるパソコン用インストーラーを使ってください。</string>
+</resources>

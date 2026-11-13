@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<resources>
+    <string name="msg_catalog_missing">قائمة إصدارات Lumen OS غير متوفرة بعد. صِل جهاز العرض بالإنترنت وحاول مرة أخرى. أو اختر مجلد LumenOS يحتوي على القائمة.</string>
+    <string name="msg_catalog_loading">جارٍ البحث عن إصدارات Lumen OS لجهاز العرض هذا.</string>
+    <string name="msg_catalog_bad_sig">لم تجتز قائمة إصدارات Lumen OS فحص الأصالة. لم يتغير شيء.</string>
+    <string name="msg_catalog_bad">قائمة إصدارات Lumen OS تالفة (%1$s). لم يتغير شيء.</string>
+    <string name="msg_catalog_old">قائمة إصدارات Lumen OS هذه قديمة (%1$s). لدى المثبّت قائمة أحدث (%2$s). لم يتغير شيء.</string>
+    <string name="msg_catalog_note">%1$s</string>
+    <string name="msg_catalog_offline">لا يوجد اتصال بالإنترنت الآن. يعرض المثبّت قائمة الإصدارات المحفوظة في %1$s.</string>
+    <string name="msg_no_build">لا يوجد إصدار من Lumen OS لجهاز العرض هذا بعد (%1$s). تظهر الإصدارات الجديدة هنا: %2$s</string>
+    <string name="msg_computer_only">يُثبَّت Lumen OS على %1$s من جهاز كمبيوتر. لا يمكن التجربة بدون كمبيوتر على هذا الطراز. يوضح الدليل الطريقة: %2$s</string>
+    <string name="msg_catalog_mismatch">إصدار Lumen OS لا يطابق قائمة الإصدارات (%1$s). لم يُنزَّل شيء.</string>
+    <string name="msg_stick_not_listed">ملف Lumen OS في مجلد LumenOS ليس إصدارًا حاليًا لجهاز العرض هذا. انسخ ملفات الإصدار الحالي إلى المجلد. لم يتغير شيء.</string>
+    <string name="opt_version_stable">الإصدار: مستقر %1$s</string>
+    <string name="opt_version_beta">الإصدار: تجريبي %1$s</string>
+    <string name="opt_version_stable_hint">إصدار Lumen OS المختبَر لجهاز العرض هذا.</string>
+    <string name="opt_version_beta_hint">الإصدار التجريبي نسخة للاختبار. قد يحتوي على أخطاء. يجتاز فحص الأمان نفسه.</string>
+    <string name="opt_version_beta_only">يتوفر إصدار تجريبي فقط</string>
+    <string name="msg_check_ok_leftovers_kept">كل شيء على ما يرام. يلزم نحو %1$s غيغابايت من المساحة الحرة وهي متوفرة. ترك تحديث سابق من XGIMI نحو %2$s ميغابايت من ملفات عمله في ذاكرة جهاز العرض. هذا الإصدار من Lumen OS لا يحذفها، لذلك لا يمكن تثبيته من التجربة على جهاز العرض هذا. التجربة تعمل. للاحتفاظ بـ Lumen OS استخدم مثبّت الكمبيوتر من الدليل.</string>
+</resources>

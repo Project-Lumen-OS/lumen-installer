@@ -16,14 +16,13 @@ import java.util.Properties;
  * and a fake GitHub. The app calls it from a worker thread.
  *
  *   detect   props only: model, board, stock version, Lumen/trial already running, orange, looked up in the signed
- *            list of projectors (Index: the last verified one the app keeps, or the one of a LumenOS folder).
- *            The app knows no model: the list says which ones exist, what each may do and where its releases are.
- *   check    a fresh signed list (download source), root probe (debugserver), signed channel manifest + SHA256SUMS,
- *            stock version, free space; or, with the USB stick source, the same signed SHA256SUMS (+ the manifest when
- *            the folder has it) read from the stick
- *   download the image, resumable (Range + If-Range), into the app's files dir on /data, or into the app's own
- *            folder on the USB stick (keep on stick: no /data space for the download); nothing with the stick source
- *   verify   sha256 against the signed SHA256SUMS; can the release install itself from the trial (erofs lookup)
+ *            catalog of builds (Catalog: the last verified one the app keeps, or the one of a LumenOS folder).
+ *            The app knows no model: the catalog lists the models that have a published build, and each build.
+ *   check    a fresh signed catalog (download source), root probe (debugserver), the build's signed SHA256SUMS (it must
+ *            give the catalog's sha256) and the image size on the server (the catalog's), free space; or, with the
+ *            USB stick source, the same signed SHA256SUMS read from the stick, naming exactly a build of the catalog
+ *   download the image, resumable (Range + If-Range), into the app's files dir on /data; nothing with the stick source
+ *   verify   sha256 against the catalog and the signed SHA256SUMS; whether the build installs itself from the trial
  *   prepare  the AVB hashtree footer as a separate tail file (AvbTail), checked again after writing
  *   start    ONLY after the user confirmed: root `cat image tail | gsi_tool install ... --no-reboot`, then
  *            `gsi_tool enable --single-boot`; the user restarts. One-shot: the restart after that is stock again.
@@ -43,13 +42,15 @@ public final class Engine {
         void log(String line);
     }
 
-    /** the signed list of projectors: its address, and the certificates of its key (the only ones in the app) */
-    public static final String INDEX_URL = "https://github.com/Project-Lumen-OS/lumen-installer/releases/download/index/devices.json";
-    public static final String INDEX_NAME = "devices.json";
+    /** the signed catalog of builds: its address, and the certificates of its key (the only ones in the app) */
+    public static final String CATALOG_URL = "https://github.com/Project-Lumen-OS/lumen-installer/releases/download/index/catalog.json";
+    public static final String CATALOG_NAME = "catalog.json";
 
     public static final class Config {
-        public String indexUrl = INDEX_URL;
-        public List<X509Certificate> indexCerts;
+        public String catalogUrl = CATALOG_URL;
+        public List<X509Certificate> catalogCerts;
+        /** the user's language for texts the catalog carries (en when it has none in this language) */
+        public String lang = "en";
         public boolean allowLocalHttp = false;
         public long userdataBytes = 8L << 30;      // the trial's own userdata (8 GiB)
         public long marginBytes = 512L << 20;
@@ -62,19 +63,23 @@ public final class Engine {
     }
 
     public static final class Detection {
-        /** the list entry in use: the model's entry, or the same entry reading its beta channel (Version: Beta,
-         *  download source, an entry with a beta channel); null = the list has no such model (or no list yet) */
-        public Index.Entry model;
-        /** the entry's line for this stock version (trial, install), null when the version is not in it */
-        public Index.Stock stockRow;
-        /** the entry has a stable AND a beta channel and the download source is on: the Version choice is offered */
+        /** the catalog entry of this model; null = no build for it (or no catalog yet) */
+        public Catalog.Entry model;
+        /** the build a download reads: the stable one, or the beta one when the user chose Beta (or when only a beta
+         *  exists); null with the stick source (the folder's file names the build) */
+        public Catalog.Build build;
+        /** the entry's line for this stock version, null when the version is not in it */
+        public Catalog.Stock stockRow;
+        /** a stable AND a beta build and the download source is on: the Version choice is offered */
         public boolean betaOffered;
-        /** the entry has a beta channel only and the download source is on: no Version choice, the beta is read
-         *  directly and the screen says that only a beta version exists */
+        /** a beta build only and the download source is on: no Version choice, the beta is read directly and the
+         *  screen says that only a beta version exists */
         public boolean betaOnly;
+        /** the versions the choice shows ("" = none) */
+        public String stableVersion = "", betaVersion = "";
         public String code = "", board = "", stock = "", name = "";
-        /** the serial of the list the verdict came from, 0 = no list */
-        public long indexSerial;
+        /** the serial of the catalog the verdict came from, 0 = no catalog */
+        public long catalogSerial;
         public Msg verdict;
         public String[] args = new String[0];
         public boolean ok() { return verdict == Msg.SUPPORTED; }
@@ -87,8 +92,10 @@ public final class Engine {
     private volatile boolean stop;
 
     public Detection det;
-    /** the signed list of projectors in use (null: none verified yet) */
-    public Index index;
+    /** the signed catalog in use (null: none verified yet) */
+    public Catalog catalog;
+    /** the build the last check found (download: the chosen one, stick: the folder's), null before */
+    public Catalog.Build build;
     public TrialState trial = TrialState.NONE;
     public String version = "", imageName = "", imageSha = "", imageUrl = "";
     public long imageSize, superBytes, dataFreeBytes;
@@ -96,7 +103,7 @@ public final class Engine {
     public long leftoverKib;
     public boolean virtualAb;
     /** the space plan of the last check, bytes: what /data must hold and its parts */
-    public long needData, needSystem, needUserdata, needReserve, needDownload, needMargin, stickFree;
+    public long needData, needSystem, needUserdata, needReserve, needDownload, needMargin;
     private final File dir;
     private final Properties st = new Properties();
 
@@ -119,30 +126,25 @@ public final class Engine {
 
     // ------------------------------------------------------------------------------------------------- state
     File stateFile() { return new File(dir, "state.properties"); }
-    /** the image in use: the download (in the app's dir, or in the app's folder on a stick) or the stick folder's file */
+    /** the image in use: the download (in the app's dir) or the stick folder's file */
     public File imageFile() { String p = state("image.path"); return p.isEmpty() ? internalImage() : new File(p); }
     File internalImage() { return new File(dir, "image.img"); }
     public File tailFile() { return new File(dir, "image.tail"); }
 
-    /** the last verified signed list of projectors (the newest serial the app has seen), kept for the next start */
-    File indexFile() { return new File(dir, INDEX_NAME); }
-    File indexSigFile() { return new File(dir, INDEX_NAME + ".sig"); }
+    /** the last verified signed catalog (the newest serial the app has seen), kept for the next start */
+    File catalogFile() { return new File(dir, CATALOG_NAME); }
+    File catalogSigFile() { return new File(dir, CATALOG_NAME + ".sig"); }
 
     public ImageSource source() { return "stick".equals(state("source")) ? ImageSource.STICK : ImageSource.NET; }
 
-    /** net source only: download into the app's own folder on the USB stick instead of /data */
-    public boolean keepOnStick() { return "1".equals(state("keep.stick")); }
-
     public void setSource(ImageSource s) { set("source", s == ImageSource.STICK ? "stick" : "net"); saveState(); }
-
-    public void setKeepOnStick(boolean k) { set("keep.stick", k ? "1" : "0"); saveState(); }
 
     /** Stable unless the user chose Beta (any other stored value is Stable). */
     public ReleaseChannel channel() { return "beta".equals(state("channel")) ? ReleaseChannel.BETA : ReleaseChannel.STABLE; }
 
     public void setChannel(ReleaseChannel c) { set("channel", c == ReleaseChannel.BETA ? "beta" : "stable"); saveState(); }
 
-    /** is the image our own download (internal or on the stick), which we may delete? Never a stick folder file. */
+    /** is the image our own download, which we may delete? Never a stick folder file. */
     boolean imageIsDownload() { return !"stick".equals(state("image.from")); }
 
     private void loadState() {
@@ -176,7 +178,7 @@ public final class Engine {
         internalImage().delete();
         tailFile().delete();
         for (String k : new String[] { "image.name", "image.sha", "image.size", "image.url", "image.etag", "image.verified",
-                "image.mtime", "image.handover", "image.path", "image.from", "tail.sha", "tail.size", "total", "version",
+                "image.mtime", "image.install", "image.clears", "image.path", "image.from", "tail.sha", "tail.size", "total", "version",
                 "model" }) st.remove(k);
         saveState();
     }
@@ -187,97 +189,108 @@ public final class Engine {
         saveState();
     }
 
-    // ------------------------------------------------------------------------------------------------- the list
-    /** Read and verify a list (json + sig); null when missing or refused (the reason goes to the log). */
-    Index readIndex(File json, File sig, String what) {
+    // ------------------------------------------------------------------------------------------------- the catalog
+    /** Read and verify a catalog (json + sig); null when missing or refused (the reason goes to the log). */
+    Catalog readCatalog(File json, File sig, String what) {
         if (!json.isFile() || !sig.isFile()) return null;
         try {
-            return Index.parse(Bytes.readFile(json, 1 << 20), Bytes.readFile(sig, 4096), cfg.indexCerts, cfg.allowLocalHttp);
-        } catch (Index.Bad b) {
-            l.log(what + ": list of projectors refused: " + b.getMessage());
+            return Catalog.parse(Bytes.readFile(json, 1 << 20), Bytes.readFile(sig, 4096), cfg.catalogCerts, cfg.allowLocalHttp);
+        } catch (Catalog.Bad b) {
+            l.log(what + ": catalog refused: " + b.getMessage());
         } catch (IOException e) {
-            l.log(what + ": list of projectors not read: " + e.getMessage());
+            l.log(what + ": catalog not read: " + e.getMessage());
         }
         return null;
     }
 
-    /** Keep a verified list as the app's own copy (only a newer or equal serial ever replaces it). */
-    private void keepIndex(byte[] json, byte[] sig) {
+    /** Keep a verified catalog as the app's own copy (only a newer or equal serial ever replaces it). */
+    private void keepCatalog(byte[] json, byte[] sig) {
         try {
-            File t = new File(dir, INDEX_NAME + ".tmp"), ts = new File(dir, INDEX_NAME + ".sig.tmp");
+            File t = new File(dir, CATALOG_NAME + ".tmp"), ts = new File(dir, CATALOG_NAME + ".sig.tmp");
             Bytes.writeFile(t, json);
             Bytes.writeFile(ts, sig);
-            if (!ts.renameTo(indexSigFile()) || !t.renameTo(indexFile())) l.log("list of projectors not kept: rename");
+            if (!ts.renameTo(catalogSigFile()) || !t.renameTo(catalogFile())) l.log("catalog not kept: rename");
         } catch (IOException e) {
-            l.log("list of projectors not kept: " + e.getMessage());
+            l.log("catalog not kept: " + e.getMessage());
         }
     }
 
-    /** The list a LumenOS folder carries (devices.json + .sig next to the release files), when one is there. */
-    private File kitIndexDir() {
+    /** The catalog a LumenOS folder carries (catalog.json + .sig next to the release files), when one is there. */
+    private File kitCatalogDir() {
         for (Host.Volume v : host.kitVolumes()) {
             for (File d : new File[] { new File(v.root, KIT_DIR), new File(v.appDir, KIT_DIR) }) {
-                if (new File(d, INDEX_NAME).canRead()) return d;
+                if (new File(d, CATALOG_NAME).canRead()) return d;
             }
         }
         return null;
     }
 
     /**
-     * The list in use: the newest verified one of the app's own copy and (stick source) the LumenOS folder's. A
-     * folder list newer than the app's copy becomes the app's copy. null = none.
+     * The catalog in use: the newest verified one of the app's own copy and (stick source) the LumenOS folder's. A
+     * folder catalog newer than the app's copy becomes the app's copy. null = none.
      */
-    public Index currentIndex() {
-        Index best = index;
-        Index own = readIndex(indexFile(), indexSigFile(), "kept");
+    public Catalog currentCatalog() {
+        Catalog best = catalog;
+        Catalog own = readCatalog(catalogFile(), catalogSigFile(), "kept");
         if (own != null && (best == null || own.serial > best.serial)) best = own;
         if (source() == ImageSource.STICK) {
-            File kd = kitIndexDir();
-            Index k = kd == null ? null : readIndex(new File(kd, INDEX_NAME), new File(kd, INDEX_NAME + ".sig"), "LumenOS folder");
+            File kd = kitCatalogDir();
+            Catalog k = kd == null ? null : readCatalog(new File(kd, CATALOG_NAME), new File(kd, CATALOG_NAME + ".sig"), "LumenOS folder");
             if (k != null && (best == null || k.serial > best.serial)) {
                 best = k;
                 try {
-                    keepIndex(Bytes.readFile(new File(kd, INDEX_NAME), 1 << 20), Bytes.readFile(new File(kd, INDEX_NAME + ".sig"), 4096));
+                    keepCatalog(Bytes.readFile(new File(kd, CATALOG_NAME), 1 << 20), Bytes.readFile(new File(kd, CATALOG_NAME + ".sig"), 4096));
                 } catch (IOException e) {
-                    l.log("list of projectors not kept: " + e.getMessage());
+                    l.log("catalog not kept: " + e.getMessage());
                 }
             } else if (k != null && best != null && k.serial < best.serial) {
-                l.log("LumenOS folder: its list of projectors (" + k.serial + ") is older than the one in use (" + best.serial + ")");
+                l.log("LumenOS folder: its catalog (" + k.serial + ") is older than the one in use (" + best.serial + ")");
             }
         }
-        index = best;
+        catalog = best;
         return best;
     }
 
     /**
-     * Download the signed list of projectors, verify it with the app's list certificates and keep it. A list older
-     * than the one already verified (a smaller serial) is refused. false = not refreshed (said why, as a message).
+     * Download the signed catalog, verify it with the app's list certificates and keep it. A catalog older than the
+     * one already verified (a smaller serial) is refused. Offline with a kept catalog: says so (with its date) and the
+     * kept one stays in use. false = not refreshed (said why, as a message).
      */
-    public boolean refreshIndex() {
-        Index old = currentIndex();
+    public boolean refreshCatalog() {
+        Catalog old = currentCatalog();
         byte[] json, sig;
         try {
-            json = http.fetch(cfg.indexUrl, 1 << 20);
-            sig = http.fetch(cfg.indexUrl + ".sig", 4096);
+            json = http.fetch(cfg.catalogUrl, 1 << 20);
+            sig = http.fetch(cfg.catalogUrl + ".sig", 4096);
         } catch (IOException e) {
-            l.message(Msg.NET_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
+            String why = e.getMessage() == null ? e.toString() : e.getMessage();
+            l.log("catalog not downloaded: " + why);
+            if (old != null) l.message(Msg.CATALOG_OFFLINE, day(old.serial));
+            else l.message(Msg.NET_FAILED, why);
             return false;
         }
-        Index got;
+        Catalog got;
         try {
-            got = Index.parse(json, sig, cfg.indexCerts, cfg.allowLocalHttp);
-        } catch (Index.Bad b) {
+            got = Catalog.parse(json, sig, cfg.catalogCerts, cfg.allowLocalHttp);
+        } catch (Catalog.Bad b) {
             l.message(b.msg, b.msg.args == 0 ? new String[0] : new String[] { b.arg == null ? "" : b.arg });
             return false;
         }
         if (old != null && got.serial < old.serial) {
-            l.message(Msg.INDEX_OLD, String.valueOf(got.serial), String.valueOf(old.serial));
+            l.message(Msg.CATALOG_OLD, String.valueOf(got.serial), String.valueOf(old.serial));
             return false;
         }
-        keepIndex(json, sig);
-        index = got;
-        l.log("list of projectors " + got.serial + " (" + got.models.size() + " models)");
+        keepCatalog(json, sig);
+        catalog = got;
+        l.log("catalog " + got.serial + " (" + got.models.size() + " models)");
         return true;
+    }
+
+    /** the day of a catalog serial (its UTC seconds), as the offline message shows it */
+    static String day(long serial) {
+        java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
+        f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+        return f.format(new java.util.Date(serial * 1000L));
     }
 
     // ------------------------------------------------------------------------------------------------- detect
@@ -288,13 +301,17 @@ public final class Engine {
         if (d.code.isEmpty()) d.code = Props.get(p, "ro.xgimi.modelname");
         d.board = Props.get(p, "ro.boot.hardware");
         d.stock = Props.get(p, "ro.vendor.build.version.incremental");
-        Index ix = currentIndex();
-        d.indexSerial = ix == null ? 0 : ix.serial;
-        Index.Entry base = ix == null ? null : ix.find(d.code);
-        boolean beta = base != null && base.status == ModelSupport.SUPPORTED && base.hasBeta() && source() == ImageSource.NET;
-        d.betaOffered = beta && !base.betaOnly();
-        d.betaOnly = beta && base.betaOnly();
-        d.model = row(base);
+        Catalog cat = currentCatalog();
+        d.catalogSerial = cat == null ? 0 : cat.serial;
+        d.model = cat == null ? null : cat.find(d.code);
+        // the builds this stock version can take: a stable one and the newest beta, each only when it lists the version
+        Catalog.Build stable = fits(d.model, ReleaseChannel.STABLE, d.stock), beta = fits(d.model, ReleaseChannel.BETA, d.stock);
+        boolean net = source() == ImageSource.NET;
+        d.betaOffered = net && stable != null && beta != null;
+        d.betaOnly = net && stable == null && beta != null;
+        d.stableVersion = stable == null ? "" : stable.version;
+        d.betaVersion = beta == null ? "" : beta.version;
+        d.build = net ? row(stable, beta) : null;
         d.stockRow = d.model == null ? null : d.model.stock(d.stock);
         d.name = d.model != null ? d.model.name : (d.code.isEmpty() ? "?" : d.code);
         String lumen = Props.get(p, "ro.lumen.version");
@@ -304,22 +321,22 @@ public final class Engine {
             d.verdict = Msg.IN_TRIAL;
         } else if (!lumen.isEmpty()) {
             d.verdict = Msg.ALREADY_LUMEN; d.args = new String[] { lumen };
-        } else if (ix == null) {
-            d.verdict = Msg.INDEX_MISSING;
+        } else if (cat == null) {
+            d.verdict = Msg.CATALOG_MISSING;
         } else if (d.model == null) {
-            d.verdict = Msg.UNKNOWN_MODEL; d.args = new String[] { code };
-        } else if (d.model.status != ModelSupport.SUPPORTED) {
-            if (d.model.message != null) { d.verdict = Msg.INDEX_NOTE; d.args = d.model.message.clone(); }
-            else if (d.model.status == ModelSupport.COMPUTER_ONLY) { d.verdict = Msg.COMPUTER_ONLY; d.args = new String[] { d.model.name }; }
-            else { d.verdict = Msg.NOT_YET; d.args = new String[] { d.model.name }; }
+            d.verdict = Msg.NO_BUILD; d.args = new String[] { code, cat.releases };
+        } else if (!d.model.hasTrial()) {
+            d.verdict = Msg.COMPUTER_ONLY; d.args = new String[] { d.model.name, cat.guide };
         } else if (!d.model.board.equals(d.board)) {
             d.verdict = Msg.BOARD_MISMATCH; d.args = new String[] { code, d.board.isEmpty() ? "?" : d.board };
         } else if (d.model.refused.containsKey(d.stock)) {
-            d.verdict = Msg.INDEX_NOTE; d.args = d.model.refused.get(d.stock).clone();
+            d.verdict = Msg.CATALOG_NOTE; d.args = new String[] { Catalog.text(d.model.refused.get(d.stock), cfg.lang) };
         } else if (d.stockRow == null) {
-            // the list's stock versions of this model code (another one may be a firmware of another model)
+            // the catalog's stock versions of this model code (another one may be a firmware of another model)
             d.verdict = Msg.MODEL_STOCK_UNSUPPORTED;
             d.args = new String[] { code, d.stock.isEmpty() ? "?" : d.stock, join(d.model.stockVersions()) };
+        } else if (net && d.build == null) {
+            d.verdict = Msg.STOCK_UNSUPPORTED; d.args = new String[] { d.stock, join(buildStock(d.model)) };
         } else if (!"orange".equals(Props.get(p, "ro.boot.verifiedbootstate"))) {
             String v = Props.get(p, "ro.boot.verifiedbootstate");
             d.verdict = Msg.NOT_ORANGE; d.args = new String[] { v.isEmpty() ? "?" : v };
@@ -330,13 +347,24 @@ public final class Engine {
         return d;
     }
 
-    /** The entry a download reads: the model's stable channel, or its beta channel when the user chose Beta and the
-     *  entry has one. An entry with a beta only reads its beta without a choice. A stick folder always uses the
-     *  model's entry. */
-    Index.Entry row(Index.Entry m) {
-        if (m == null || source() != ImageSource.NET || !m.hasBeta()) return m;
-        if (m.betaOnly()) return m.asBeta();
-        return channel() == ReleaseChannel.BETA ? m.asBeta() : m;
+    /** The build a download reads: the stable one, or the beta one when the user chose Beta and there is one. With a
+     *  beta only, the beta is read without a choice. */
+    Catalog.Build row(Catalog.Build s, Catalog.Build b) {
+        if (s == null) return b;
+        return channel() == ReleaseChannel.BETA && b != null ? b : s;
+    }
+
+    /** the trial build of this channel when it takes this stock version, else null */
+    static Catalog.Build fits(Catalog.Entry m, ReleaseChannel c, String stock) {
+        Catalog.Build b = m == null ? null : m.build(c);
+        return b != null && b.stock.contains(stock) ? b : null;
+    }
+
+    /** every stock version some trial build of the model takes */
+    static List<String> buildStock(Catalog.Entry m) {
+        List<String> out = new java.util.ArrayList<>();
+        for (Catalog.Build b : m.builds) if (b.trial) for (String v : b.stock) if (!out.contains(v)) out.add(v);
+        return out;
     }
 
     // ------------------------------------------------------------------------------------------------- check
@@ -346,31 +374,30 @@ public final class Engine {
         return false;
     }
 
-    /** The stick folder found by {@link #findKit}: the signed list's one image of this model, read from the stick. */
+    /** The stick folder found by {@link #findKit}: a build of the catalog, read from the stick. */
     static final class Kit {
         File dir, image;
-        String name, version, sha;
-        java.util.List<String> vendorOk;
+        Catalog.Build build;
     }
 
     /**
-     * Detection, the stick folder (stick source), root probe, signed release lookup (net source), free space. Writes
-     * nothing except the app's own state file.
+     * Detection, the stick folder (stick source), root probe, the build's signed files (download source), free
+     * space. Writes nothing except the app's own state file.
      */
     public boolean check() {
         l.step(InstallStep.CHECK, StepStatus.RUNNING);
         ImageSource src = source();
-        // the download source asks the list of projectors first, every time: what this model may do is the list's
-        if (src == ImageSource.NET && !refreshIndex()) {
+        // the download source asks the catalog first, every time: what this model may get is the catalog's
+        if (src == ImageSource.NET && !refreshCatalog()) {
             l.step(InstallStep.CHECK, StepStatus.FAILED);
             det = detect();
             return false;
         }
         Detection d = detect();
         if (!d.ok()) return fail(InstallStep.CHECK, d.verdict, d.args);
-        Index.Entry m = d.model;
+        Catalog.Entry m = d.model;
         List<X509Certificate> certs = m.certs;
-        // the stick folder first: pure file reads, verified exactly like the download (same certificates, same rules)
+        // the stick folder first: pure file reads, verified exactly like the download (same certificates, same build)
         Kit kit = null;
         if (src == ImageSource.STICK) {
             kit = findKit(m, certs, d);
@@ -384,7 +411,7 @@ public final class Engine {
         if (pr == null) return fail(InstallStep.CHECK, Msg.ROOT_UNAVAILABLE);
         if (!pr.done) return fail(InstallStep.CHECK, rootMsg(pr), rootArgs(pr));
         if (!m.code.equals(pr.kv("model"))) return fail(InstallStep.CHECK, Msg.ROOT_FAILED, "model " + pr.kv("model"));
-        // the stock really is this model's (the list says): its product name and its own config folder
+        // the stock really is this model's (the catalog says): its product name and its own config folder
         String prod = pr.kv("product");
         if (m.product != null && prod != null && !prod.isEmpty() && !prod.equals(m.product)) {
             return fail(InstallStep.CHECK, Msg.PRODUCT_MISMATCH, m.code, prod, m.product);
@@ -428,54 +455,41 @@ public final class Engine {
 
         File target;   // where the image is (stick) or goes (download)
         String from;
+        Catalog.Build b;
         if (kit != null) {
-            version = kit.version;
-            imageName = kit.name;
-            imageSha = kit.sha;
+            b = kit.build;
             imageUrl = "";
             imageSize = kit.image.length();
             target = kit.image;
             from = "stick";
         } else {
-            // the signed release chain
-            Release.Manifest man;
-            Index.Channel ch = m.channel();
-            String chan = ch.manifest;
-            l.log("channel " + (m.isBeta ? "beta " : "stable ") + ch.channel + " (" + chan + ")");
+            // the build of the catalog, checked against its own signed SHA256SUMS and the file on the server
+            b = d.build;
+            l.log("build " + b.channel + " " + b.version + " (" + b.image + ")");
             try {
-                byte[] json = http.fetch(chan, 256 * 1024);
-                byte[] sig = http.fetch(chan + ".sig", 4096);
-                man = Release.manifest(json, sig, certs, ch);
-                if (!man.vendorOk.contains(d.stock)) {
-                    return fail(InstallStep.CHECK, Msg.STOCK_UNSUPPORTED, d.stock.isEmpty() ? "?" : d.stock, join(man.vendorOk));
-                }
-                String tag = ch.releaseUrl(man.version);
-                byte[] sums = http.fetch(tag + "SHA256SUMS", 64 * 1024);
-                byte[] ssig = http.fetch(tag + "SHA256SUMS.sig", 4096);
-                imageName = ch.imageName(man.version);
-                imageSha = Release.imageSha(sums, ssig, certs, imageName);
-                imageUrl = tag + imageName;
+                byte[] sums = http.fetch(b.sums, 64 * 1024);
+                byte[] ssig = http.fetch(b.sums + ".sig", 4096);
+                String sha = Release.imageSha(sums, ssig, certs, b.imageName);
+                if (!sha.equals(b.sha256)) return fail(InstallStep.CHECK, Msg.CATALOG_MISMATCH, b.imageName + " sha256");
+                imageUrl = b.image;
                 imageSize = http.size(imageUrl);
-            } catch (Release.Bad b) {
-                return fail(InstallStep.CHECK, b.msg, b.msg.args == 0 ? new String[0] : new String[] { b.arg == null ? "" : b.arg });
+            } catch (Release.Bad x) {
+                return fail(InstallStep.CHECK, x.msg, x.msg.args == 0 ? new String[0] : new String[] { x.arg == null ? "" : x.arg });
             } catch (IOException e) {
                 return fail(InstallStep.CHECK, Msg.NET_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
             }
-            version = man.version;
-            if (keepOnStick()) {
-                List<Host.Volume> v = host.volumes();
-                if (v.isEmpty()) return fail(InstallStep.CHECK, Msg.NO_STICK);
-                target = new File(v.get(0).appDir, "image.img");
-                from = "download-stick";
-            } else {
-                target = internalImage();
-                from = "download";
-            }
+            if (imageSize != b.size) return fail(InstallStep.CHECK, Msg.CATALOG_MISMATCH, b.imageName + " " + imageSize + " bytes");
+            target = internalImage();
+            from = "download";
         }
-        if (imageSize <= 0 || imageSize % AvbTail.BS != 0 || imageSize > (4L << 30)) {
+        build = b;
+        version = b.version;
+        imageName = b.imageName;
+        imageSha = b.sha256;
+        if (imageSize <= 0 || imageSize % AvbTail.BS != 0 || imageSize > Catalog.MAX_IMAGE) {
             return fail(InstallStep.CHECK, Msg.IMAGE_SIZE_BAD, String.valueOf(imageSize));
         }
-        // another release, another model or another place: the old download is dropped (a stick folder file never)
+        // another build, another model or another place: the old download is dropped (a stick folder file never)
         if (!imageSha.equals(state("image.sha")) || !m.code.equals(state("model"))
                 || !target.getAbsolutePath().equals(imageFile().getAbsolutePath()) || !from.equals(state("image.from").isEmpty() ? "download" : state("image.from"))) {
             forgetImage();
@@ -488,6 +502,9 @@ public final class Engine {
         set("image.url", imageUrl);
         set("image.path", target.getAbsolutePath());
         set("image.from", from);
+        set("image.install", b.install ? "1" : "0");
+        set("image.clears", b.clearsLeftovers ? "1" : "0");
+        set("leftovers.kib", String.valueOf(leftoverKib));
         saveState();
         if (kit == null) l.message(Msg.RELEASE_FOUND, version, mb(imageSize));
 
@@ -495,16 +512,14 @@ public final class Engine {
         // full): the trial system (image + tail), the trial's userdata, and on Virtual A/B the size of super that is
         // kept free on top of each partition it creates (partition_installer.cpp
         // GetMinimumFreeSpaceThreshold, so the peak is userdata + system + super), the tail file, what is still to be
-        // downloaded into /data, and a margin. A download kept on the stick and a stick folder cost no /data space
-        // for the image itself.
+        // downloaded, and a margin. A stick folder costs no /data space for the image itself.
         long tail = tailEstimate(imageSize);
-        boolean download = kit == null, onStick = "download-stick".equals(from);
+        boolean download = kit == null;
         long have = download && imageFile().exists() ? Math.min(imageFile().length(), imageSize) : 0;
-        long rest = download ? imageSize - have : 0;
         needSystem = imageSize + tail;
         needUserdata = cfg.userdataBytes;
         needReserve = virtualAb ? superBytes : 0;
-        needDownload = download && !onStick ? rest : 0;
+        needDownload = download ? imageSize - have : 0;
         needMargin = tail + cfg.marginBytes;
         needData = needSystem + needUserdata + needReserve + needDownload + needMargin;
         long free = Math.min(dataFreeBytes, host.freeBytes(dir));
@@ -514,26 +529,20 @@ public final class Engine {
         l.message(Msg.SPACE_PLAN, gb(needData), gb(free), gb(needSystem), gb(needUserdata), gb(needReserve), gb(needDownload),
                 gb(needMargin));
         if (free < needData) return fail(InstallStep.CHECK, Msg.NO_SPACE, gb(needData), gb(free));
-        if (onStick) {
-            File sd = target.getParentFile();
-            if (sd != null && !sd.isDirectory()) sd.mkdirs();
-            stickFree = host.freeBytes(sd);
-            if (stickFree < rest) return fail(InstallStep.CHECK, Msg.STICK_NO_ROOM, gb(rest), gb(stickFree));
-        }
-        if (leftoverKib > 0) l.message(Msg.CHECK_OK_LEFTOVERS, gb(needData), mb(leftoverKib * 1024));
-        else l.message(Msg.CHECK_OK, gb(needData));
+        // what the check says about the leftovers is what this build's install really does (the catalog says)
+        if (leftoverKib == 0) l.message(Msg.CHECK_OK, gb(needData));
+        else if (handover() == 1) l.message(Msg.CHECK_OK_LEFTOVERS, gb(needData), mb(leftoverKib * 1024));
+        else l.message(Msg.CHECK_OK_LEFTOVERS_KEPT, gb(needData), mb(leftoverKib * 1024));
         l.step(InstallStep.CHECK, StepStatus.DONE);
         return true;
     }
 
     /**
      * The stick folder: KIT_DIR at the root of a stick, or in the app's own folder on it. It holds what a release
-     * holds: SHA256SUMS + SHA256SUMS.sig (signed with this model's OTA key, listing exactly one image of this model,
-     * whose name gives the version) and that image; optionally the model's signed channel manifest (then its version
-     * must be the same and its stock versions count), else the stock versions of the model's entry in the signed list
-     * of projectors. null = refused (said why).
+     * holds: SHA256SUMS + SHA256SUMS.sig (signed with this model's key) and an image that is a build of the catalog for
+     * this model (same name, same sha256); that build's stock versions count. null = refused (said why).
      */
-    Kit findKit(Index.Entry m, List<X509Certificate> certs, Detection d) {
+    Kit findKit(Catalog.Entry m, List<X509Certificate> certs, Detection d) {
         List<Host.Volume> vols = host.kitVolumes();
         if (vols.isEmpty()) { fail(InstallStep.CHECK, Msg.STICK_NOT_FOUND); return null; }
         File dirFound = null;
@@ -559,26 +568,9 @@ public final class Engine {
             byte[] sums = Bytes.readFile(new File(dirFound, "SHA256SUMS"), 64 * 1024);
             File sf = new File(dirFound, "SHA256SUMS.sig");
             byte[] ssig = sf.canRead() ? Bytes.readFile(sf, 4096) : null;
-            // the names of the model's stable channel, or of its beta when it has a beta only (the folder was chosen)
-            Index.Channel sc = m.stable != null ? m.stable : m.beta;
-            Release.Listed li = Release.onlyImage(sums, ssig, certs, sc);
-            k.name = li.name;
-            k.version = li.version;
-            k.sha = li.sha;
-            // the folder's channel manifest, when it has one: the stable one, else the beta one (a beta folder)
-            Index.Channel mc = sc;
-            File mf = new File(dirFound, sc.manifestName());
-            if (!mf.exists() && m.beta != null && sc != m.beta && new File(dirFound, m.beta.manifestName()).exists()) {
-                mc = m.beta;
-                mf = new File(dirFound, m.beta.manifestName());
-            }
-            File ms = new File(mf.getPath() + ".sig");
-            if (mf.exists()) {
-                Release.Manifest man = Release.manifest(Bytes.readFile(mf, 256 * 1024), ms.canRead() ? Bytes.readFile(ms, 4096) : null, certs, mc);
-                if (!man.version.equals(k.version)) { fail(InstallStep.CHECK, Msg.STICK_MISMATCH, man.version, k.version); return null; }
-                k.vendorOk = man.vendorOk;
-            } else {
-                k.vendorOk = m.stockVersions();
+            for (Map.Entry<String, String> e : Release.listed(sums, ssig, certs).entrySet()) {
+                Catalog.Build b = m.byImage(e.getKey(), e.getValue());
+                if (b != null) { k.build = b; break; }
             }
         } catch (Release.Bad b) {
             fail(InstallStep.CHECK, b.msg, b.msg.args == 0 ? new String[0] : new String[] { b.arg == null ? "" : b.arg });
@@ -588,13 +580,14 @@ public final class Engine {
             l.log("stick: " + e.getMessage());
             return null;
         }
-        if (!k.vendorOk.contains(d.stock)) {
-            fail(InstallStep.CHECK, Msg.STOCK_UNSUPPORTED, d.stock.isEmpty() ? "?" : d.stock, join(k.vendorOk));
+        if (k.build == null) { fail(InstallStep.CHECK, Msg.STICK_NOT_LISTED); return null; }
+        if (!k.build.stock.contains(d.stock)) {
+            fail(InstallStep.CHECK, Msg.STOCK_UNSUPPORTED, d.stock.isEmpty() ? "?" : d.stock, join(k.build.stock));
             return null;
         }
-        k.image = new File(dirFound, k.name);
-        if (!k.image.isFile() || !k.image.canRead()) { fail(InstallStep.CHECK, Msg.STICK_NO_IMAGE, k.name); return null; }
-        l.message(Msg.STICK_FOUND, k.version, mb(k.image.length()), dirFound.getPath());
+        k.image = new File(dirFound, k.build.imageName);
+        if (!k.image.isFile() || !k.image.canRead()) { fail(InstallStep.CHECK, Msg.STICK_NO_IMAGE, k.build.imageName); return null; }
+        l.message(Msg.STICK_FOUND, k.build.version, mb(k.image.length()), dirFound.getPath());
         return k;
     }
 
@@ -624,14 +617,9 @@ public final class Engine {
             return true;
         }
         long have = f.exists() ? f.length() : 0;
-        boolean onStick = "download-stick".equals(state("image.from"));
-        File fd = f.getParentFile();
-        if (fd != null && !fd.isDirectory() && !fd.mkdirs()) return fail(InstallStep.DOWNLOAD, Msg.NO_STICK);
-        // the download needs room where it goes; the tail always goes to the app's dir on /data
+        // the download and the tail need room in the app's dir on /data
         long rest = imageSize - Math.min(have, imageSize);
-        long room = onStick ? host.freeBytes(fd) - rest : host.freeBytes(dir) - rest - tailEstimate(imageSize);
-        if (room < 0) {
-            if (onStick) return fail(InstallStep.DOWNLOAD, Msg.STICK_NO_ROOM, gb(rest), gb(host.freeBytes(fd)));
+        if (host.freeBytes(dir) - rest - tailEstimate(imageSize) < 0) {
             return fail(InstallStep.DOWNLOAD, Msg.NO_SPACE, gb(imageSize + tailEstimate(imageSize)), gb(host.freeBytes(dir)));
         }
         String last = "";
@@ -678,7 +666,7 @@ public final class Engine {
         if (imageSha.isEmpty() || f.length() != imageSize) return fail(InstallStep.VERIFY, Msg.NOT_READY);
         if (verified()) {   // verified earlier in this download (the file is in the app's private dir)
             l.message(Msg.VERIFIED);
-            handoverMessage(parseLong(state("image.handover")));
+            handoverMessage();
             l.step(InstallStep.VERIFY, StepStatus.DONE);
             return true;
         }
@@ -699,23 +687,25 @@ public final class Engine {
         }
         set("image.verified", imageSha);
         set("image.mtime", String.valueOf(f.lastModified()));
-        int h = Erofs.handover(f);
-        set("image.handover", String.valueOf(h));
         saveState();
         l.message(Msg.VERIFIED);
-        handoverMessage(h);
+        handoverMessage();
         l.step(InstallStep.VERIFY, StepStatus.DONE);
         return true;
     }
 
-    private void handoverMessage(long h) {
-        if (h == 1) l.message(Msg.HANDOVER_YES);
-        else if (h == 0) l.message(Msg.HANDOVER_NO, version);
-        else l.message(Msg.HANDOVER_UNKNOWN);
+    private void handoverMessage() {
+        if (handover() == 1) l.message(Msg.HANDOVER_YES);
+        else l.message(Msg.HANDOVER_NO, version);
     }
 
-    /** 1: the release can install itself from the trial, 0: it cannot, -1: unknown. */
-    public int handover() { return (int) parseLong(state("image.handover").isEmpty() ? "-1" : state("image.handover")); }
+    /** 1: the build installs itself from the trial on this stock version (the catalog says both), and what a finished
+     *  XGIMI update left is either not there or cleared by this build's install; 0: it does not. */
+    public int handover() {
+        boolean open = "1".equals(state("image.install")) && det != null && det.stockRow != null && det.stockRow.install;
+        boolean left = parseLong(state("leftovers.kib")) > 0 && !"1".equals(state("image.clears"));
+        return open && !left ? 1 : 0;
+    }
 
     private boolean verified() {
         File f = imageFile();
@@ -774,18 +764,18 @@ public final class Engine {
         }
     }
 
-    /** the list says the trial may start on this model with this stock version */
-    public boolean canStart() { return det != null && det.ok() && det.stockRow != null && det.stockRow.trial; }
+    /** the catalog has a trial build for this model and lists this stock version */
+    public boolean canStart() { return det != null && det.ok() && det.stockRow != null; }
 
-    /** the trial may start, installing for good from it is not open for this model and stock version yet */
-    public boolean trialOnly() { return canStart() && !det.stockRow.install; }
+    /** the trial may start, installing for good from it is not open for this build and stock version */
+    public boolean trialOnly() { return canStart() && handover() != 1; }
 
     // ------------------------------------------------------------------------------------------------- start
     /** The only step that writes outside the app: the trial goes into /data/gsi and one boot is armed. */
     public boolean start() {
         l.step(InstallStep.START, StepStatus.RUNNING);
         if (det == null || !det.ok()) return fail(InstallStep.START, Msg.NOT_READY);
-        if (!canStart()) return fail(InstallStep.START, Msg.START_PILOT, det.model.name);
+        if (!canStart()) return fail(InstallStep.START, Msg.NOT_READY);
         if (!prepared()) return fail(InstallStep.START, Msg.NOT_READY);
         long total = imageSize + Long.parseLong(state("tail.size"));
         long superB = parseLong(state("super.kib")) * 1024;
@@ -808,8 +798,8 @@ public final class Engine {
         set("trial.model", det.model.code);
         saveState();
         trial = TrialState.OURS;
-        // the trial has its own copy now: free the /data the download took; an image on the stick (its folder, or the
-        // download kept there) stays for another trial, only the tail goes
+        // the trial has its own copy now: free the /data the download took; an image in a stick folder stays for another
+        // trial, only the tail goes
         if ("download".equals(state("image.from").isEmpty() ? "download" : state("image.from"))) forgetImage();
         else forgetTail();
         l.message(Msg.STARTED);
@@ -820,7 +810,7 @@ public final class Engine {
     /** Arm the installed trial for one more boot (gsi_tool enable --single-boot). */
     public boolean enableAgain() {
         l.step(InstallStep.START, StepStatus.RUNNING);
-        if (det == null || det.model == null || !canStart()) return fail(InstallStep.START, Msg.START_PILOT, det == null ? "?" : det.name);
+        if (det == null || det.model == null || !canStart()) return fail(InstallStep.START, Msg.NOT_READY);
         // only a trial this app installed for this model (never another one)
         if (state("trial.version").isEmpty() || !det.model.code.equals(state("trial.model"))) return fail(InstallStep.START, Msg.NOT_READY);
         Root.Result r = runRoot(new Root.Job("enable", Root.newNonce()).put("MODEL", det.model.code), cfg.probeTimeoutMs);
