@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<!-- Lumen Installer: the catalog texts, the version choice and what a button says while its task runs (the other texts are English for now) -->
 <resources>
     <string name="msg_catalog_missing">Lumen OS sürümlerinin listesi henüz yok. Projektörü internete bağlayın ve tekrar deneyin. Ya da listeyi içeren bir LumenOS klasörü seçin.</string>
     <string name="msg_catalog_loading">Bu projektör için Lumen OS sürümleri aranıyor.</string>
@@ -18,4 +18,9 @@
     <string name="opt_version_beta_hint">Beta bir deneme sürümüdür. Hatalar içerebilir. Aynı güvenlik denetiminden geçer.</string>
     <string name="opt_version_beta_only">Yalnızca beta sürümü var</string>
     <string name="msg_check_ok_leftovers_kept">Her şey yolunda. Yaklaşık %1$s GB boş alan gerekiyor ve bu alan var. Daha önceki bir XGIMI güncellemesi projektörün belleğinde yaklaşık %2$s MB çalışma dosyası bıraktı. Lumen OS\'un bu sürümü bunları silmez, bu yüzden bu projektörde denemeden kurulamaz. Deneme çalışır. Lumen OS\'u kalıcı yapmak için kılavuzdaki bilgisayar yükleyicisini kullanın.</string>
+    <string name="btn_busy_prepare">Hazırlanıyor…</string>
+    <string name="btn_busy_catalog">Bağlanıyor…</string>
+    <string name="btn_busy_start">Başlatılıyor…</string>
+    <string name="btn_busy_remove">Kaldırılıyor…</string>
+    <string name="btn_busy_restart">Yeniden başlatılıyor…</string>
 </resources>

@@ -21,11 +21,13 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import org.lumen.installer.core.ActionGate;
 import org.lumen.installer.core.Engine;
 import org.lumen.installer.core.ImageSource;
 import org.lumen.installer.core.Msg;
 import org.lumen.installer.core.ReleaseChannel;
 import org.lumen.installer.core.StepStatus;
+import org.lumen.installer.core.Task;
 import org.lumen.installer.core.TrialState;
 
 import java.util.List;
@@ -35,7 +37,8 @@ import java.util.List;
  * buttons; the five steps with their progress and the last log lines on the right. Every action that writes outside
  * the app (start the trial, restart, remove the trial) asks first, with Cancel focused. Above the buttons, before a
  * step ran: where the image comes from (download, or a LumenOS folder on a USB stick); in the steps card the version
- * (the catalog's stable build, or its newest beta).
+ * (the catalog's stable build, or its newest beta). A button that starts a task works once: until the task ends it
+ * says what runs ("Restarting…") and the remote does nothing on it (ActionGate).
  */
 public class MainActivity extends Activity {
     // Lumen tokens (apps/common/tokens.xml) and the quick-menu look: dark rounded cards, accent #3B78E7
@@ -48,6 +51,9 @@ public class MainActivity extends Activity {
     LinearLayout buttons, options, version;
     String buttonKey = "", optionsKey = "";
     int seenSeq = -1;
+    /** the controls that work while a task runs (Pause of a download, About): OK on any other view does nothing */
+    static final Object OFFERED = new Object();
+    AlertDialog asking;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -71,6 +77,7 @@ public class MainActivity extends Activity {
         TextView about = Look.infoButton(this);
         about.setContentDescription(getString(R.string.about_title));
         about.setOnClickListener(v -> startActivity(new Intent(this, AboutActivity.class)));
+        about.setTag(OFFERED);
         head.addView(about, new LinearLayout.LayoutParams(dp(40), dp(40)));
         left.addView(head);
         device = text("", 15, DIM);
@@ -145,9 +152,9 @@ public class MainActivity extends Activity {
         s.source = e.source();
         // the signed catalog: asked for once per start of the app (it lists the models that have a build, and their
         // builds); the last verified copy is used until it arrives
-        if (!s.catalogTried && !s.busy && s.source == ImageSource.NET) {
+        if (!s.catalogTried && !s.busy && s.gate.held() == null && s.source == ImageSource.NET) {
             s.catalogTried = true;
-            run("catalog");
+            act(Task.CATALOG);
         }
         s.channel = e.channel();
         seenSeq = -1;
@@ -167,9 +174,26 @@ public class MainActivity extends Activity {
         }
     };
 
-    @Override public boolean onKeyDown(int code, KeyEvent e) {
-        if (code == KeyEvent.KEYCODE_BACK && Snap.I.busy && "start".equals(Snap.I.task)) return true;   // gsi_tool runs
-        return super.onKeyDown(code, e);
+    /** While a task runs the remote does nothing on its button, see {@link ActionGate#swallows}. */
+    @Override public boolean dispatchKeyEvent(KeyEvent e) {
+        View f = getCurrentFocus();
+        if (Snap.I.gate.swallows(key(e.getKeyCode()), f != null && f.getTag() == OFFERED)) return true;
+        return super.dispatchKeyEvent(e);
+    }
+
+    static ActionGate.Key key(int code) {
+        switch (code) {
+            case KeyEvent.KEYCODE_DPAD_CENTER: case KeyEvent.KEYCODE_ENTER: case KeyEvent.KEYCODE_NUMPAD_ENTER:
+            case KeyEvent.KEYCODE_BUTTON_A: case KeyEvent.KEYCODE_SPACE:
+                return ActionGate.Key.SELECT;
+            case KeyEvent.KEYCODE_BACK: case KeyEvent.KEYCODE_ESCAPE:
+                return ActionGate.Key.BACK;
+            case KeyEvent.KEYCODE_DPAD_UP: case KeyEvent.KEYCODE_DPAD_DOWN: case KeyEvent.KEYCODE_DPAD_LEFT:
+            case KeyEvent.KEYCODE_DPAD_RIGHT: case KeyEvent.KEYCODE_TAB:
+                return ActionGate.Key.MOVE;
+            default:
+                return ActionGate.Key.OTHER;
+        }
     }
 
     // ------------------------------------------------------------------------------------------- render
@@ -182,7 +206,7 @@ public class MainActivity extends Activity {
             // the code once: a name from the list may carry it already, an unknown model has only its code
             device.setText(d.name.contains(code) ? getString(R.string.device_line_short, d.name, stock)
                     : getString(R.string.device_line, d.name, code, stock));
-            boolean loading = d.verdict == Msg.CATALOG_MISSING && s.busy && "catalog".equals(s.task);
+            boolean loading = d.verdict == Msg.CATALOG_MISSING && s.gate.held() == Task.CATALOG;
             verdict.setText(loading ? msg(Msg.CATALOG_LOADING, null) : msg(d.verdict, d.args));
             verdict.setTextColor(d.ok() ? OK : loading || d.verdict == Msg.CATALOG_MISSING ? WARN : BAD);
         }
@@ -219,8 +243,10 @@ public class MainActivity extends Activity {
 
     void renderButtons(Snap s) {
         Engine.Detection d = s.det;
+        Task held = s.gate.held();
         String key;
-        if (s.busy) key = "busy:" + s.task;
+        if (held != null) key = "held:" + held + (held.pausable && s.busy && s.task == held ? ":pause" : "");
+        else if (s.busy) key = "busy";
         else if (d != null && d.verdict == Msg.CATALOG_MISSING) key = "nocatalog";
         else if (d == null || !d.ok()) key = "close";
         else if (s.armed) key = "armed";
@@ -233,18 +259,17 @@ public class MainActivity extends Activity {
         buttonKey = key;
         buttons.removeAllViews();
         Button first = null;
-        if (key.startsWith("busy")) {
-            first = add(R.string.btn_pause, v -> startService(WorkService.task(this, "stop")));
-            if ("busy:start".equals(key) || "busy:restart".equals(key) || "busy:remove".equals(key) || "busy:again".equals(key)
-                    || "busy:catalog".equals(key)) {
-                buttons.removeAllViews();   // root work runs to its end; the catalog is a short download
-                first = null;
-            }
+        if (held != null) {
+            // the task runs: its button says so and does nothing, the other buttons are gone until it ends (a failure
+            // brings them back with the reason); a download offers Pause
+            first = add(busyLabel(held), v -> { });
+            if (key.endsWith(":pause")) add(R.string.btn_pause, v -> startService(WorkService.task(this, "stop"))).setTag(OFFERED);
+            first.requestFocus();
         } else if ("nocatalog".equals(key)) {
             // no verified catalog yet: ask again (download), or read the LumenOS folder's catalog (stick)
             first = add(R.string.btn_retry, v -> {
                 if (Snap.I.busy) return;
-                if (Snap.I.source == ImageSource.NET) { run("catalog"); return; }
+                if (Snap.I.source == ImageSource.NET) { act(Task.CATALOG); return; }
                 Snap.I.det = WorkService.engine(this).detect();
                 Snap.I.seq++;
                 render();
@@ -253,10 +278,10 @@ public class MainActivity extends Activity {
         } else if ("close".equals(key)) {
             first = add(R.string.btn_close, v -> finish());
         } else if ("idle".equals(key)) {
-            first = add(R.string.btn_prepare, v -> run("prepare"));
+            first = add(R.string.btn_prepare, v -> act(Task.PREPARE));
             add(R.string.btn_close, v -> finish());
         } else if ("continue".equals(key)) {
-            first = add(R.string.btn_continue, v -> run("prepare"));
+            first = add(R.string.btn_continue, v -> act(Task.PREPARE));
             add(R.string.btn_close, v -> finish());
         } else if ("ready".equals(key)) {
             String keep = getString(s.handover == 1 ? R.string.confirm_keep_yes : R.string.confirm_keep_no);
@@ -266,22 +291,22 @@ public class MainActivity extends Activity {
             // the catalog says the install from the trial is not open for this build and stock: said before the start
             String only = s.trialOnly ? " " + getString(R.string.confirm_trial_only, d.name) : "";
             first = add(R.string.btn_start, v -> confirm(R.string.confirm_start_title,
-                    getString(R.string.confirm_start_body) + " " + keep + space + stick + only, R.string.btn_start, () -> run("start")));
+                    getString(R.string.confirm_start_body) + " " + keep + space + stick + only, R.string.btn_start, () -> act(Task.START)));
             add(R.string.btn_later, v -> finish());
         } else if ("armed".equals(key)) {
-            first = add(R.string.btn_restart, v -> run("restart"));
+            first = add(R.string.btn_restart, v -> act(Task.RESTART));
             add(R.string.btn_later, v -> finish());
         } else if ("ours".equals(key)) {
             // a newer image (stick folder / release) replaces the old trial in one go: remove, prepare, start
             first = add(R.string.btn_replace, v -> confirm(R.string.confirm_start_title, getString(R.string.confirm_replace_body),
-                    R.string.btn_replace, () -> run("replace")));
-            add(R.string.btn_again, v -> run("again"));
+                    R.string.btn_replace, () -> act(Task.REPLACE)));
+            add(R.string.btn_again, v -> act(Task.AGAIN));
             add(R.string.btn_remove, v -> confirm(R.string.confirm_remove_title, getString(R.string.confirm_remove_body),
-                    R.string.btn_remove, () -> run("remove")));
+                    R.string.btn_remove, () -> act(Task.REMOVE)));
             add(R.string.btn_close, v -> finish());
         } else if ("other".equals(key)) {
             first = add(R.string.btn_remove, v -> confirm(R.string.confirm_remove_title, getString(R.string.confirm_remove_body),
-                    R.string.btn_remove, () -> run("remove")));
+                    R.string.btn_remove, () -> act(Task.REMOVE)));
             add(R.string.btn_close, v -> finish());
         }
         final Button f = first;
@@ -334,7 +359,7 @@ public class MainActivity extends Activity {
         version.setVisibility(beta || only ? View.VISIBLE : View.GONE);
         if (!show) return;
         addTo(options, s.source == ImageSource.STICK ? R.string.opt_source_stick : R.string.opt_source_net, v -> {
-            if (Snap.I.busy) return;
+            if (Snap.I.busy || Snap.I.gate.held() != null) return;
             ImageSource n = Snap.I.source == ImageSource.STICK ? ImageSource.NET : ImageSource.STICK;
             Engine e = WorkService.engine(this);
             e.setSource(n);
@@ -352,7 +377,7 @@ public class MainActivity extends Activity {
             // Version: Stable (the catalog's stable build) or Beta (its newest beta, the same safety check); remembered
             Button b = addTo(row(), s.channel == ReleaseChannel.BETA ? getString(R.string.opt_version_beta, s.det.betaVersion)
                     : getString(R.string.opt_version_stable, s.det.stableVersion), v -> {
-                if (Snap.I.busy) return;
+                if (Snap.I.busy || Snap.I.gate.held() != null) return;
                 ReleaseChannel n = Snap.I.channel == ReleaseChannel.BETA ? ReleaseChannel.STABLE : ReleaseChannel.BETA;
                 Engine e = WorkService.engine(this);
                 e.setChannel(n);
@@ -383,12 +408,32 @@ public class MainActivity extends Activity {
         return r;
     }
 
-    void run(String task) {
-        Intent i = WorkService.task(this, task);
-        if (Build.VERSION.SDK_INT >= 26) startForegroundService(i); else startService(i);
+    /** Every button that starts a task comes here: the first press takes the gate and hands the task to the service,
+     *  every later press does nothing until the task ends (ActionGate). */
+    void act(Task t) {
+        boolean taken = Snap.I.gate.press(t, () -> {
+            Intent i = WorkService.task(this, t.id());
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(i); else startService(i);
+        });
+        if (!taken) return;
+        Snap.I.seq++;
+        render();
     }
 
+    /** what the button of a running task says */
+    static int busyLabel(Task t) {
+        switch (t) {
+            case CATALOG: return R.string.btn_busy_catalog;
+            case PREPARE: case REPLACE: return R.string.btn_busy_prepare;
+            case START: case AGAIN: return R.string.btn_busy_start;
+            case REMOVE: return R.string.btn_busy_remove;
+            default: return R.string.btn_busy_restart;
+        }
+    }
+
+    /** asks once: a second press while the question is open does not open another one */
     void confirm(int title, String body, int yes, Runnable r) {
+        if (asking != null && asking.isShowing()) return;
         AlertDialog d = new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(body)
@@ -399,6 +444,7 @@ public class MainActivity extends Activity {
             TvFocus.dialog(d);
             d.getButton(AlertDialog.BUTTON_NEGATIVE).requestFocus();
         });
+        asking = d;
         d.show();
     }
 

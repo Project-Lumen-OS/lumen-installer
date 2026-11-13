@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<!-- Lumen Installer: the catalog texts, the version choice and what a button says while its task runs (the other texts are English for now) -->
 <resources>
     <string name="msg_catalog_missing">قائمة إصدارات Lumen OS غير متوفرة بعد. صِل جهاز العرض بالإنترنت وحاول مرة أخرى. أو اختر مجلد LumenOS يحتوي على القائمة.</string>
     <string name="msg_catalog_loading">جارٍ البحث عن إصدارات Lumen OS لجهاز العرض هذا.</string>
@@ -18,4 +18,9 @@
     <string name="opt_version_beta_hint">الإصدار التجريبي نسخة للاختبار. قد يحتوي على أخطاء. يجتاز فحص الأمان نفسه.</string>
     <string name="opt_version_beta_only">يتوفر إصدار تجريبي فقط</string>
     <string name="msg_check_ok_leftovers_kept">كل شيء على ما يرام. يلزم نحو %1$s غيغابايت من المساحة الحرة وهي متوفرة. ترك تحديث سابق من XGIMI نحو %2$s ميغابايت من ملفات عمله في ذاكرة جهاز العرض. هذا الإصدار من Lumen OS لا يحذفها، لذلك لا يمكن تثبيته من التجربة على جهاز العرض هذا. التجربة تعمل. للاحتفاظ بـ Lumen OS استخدم مثبّت الكمبيوتر من الدليل.</string>
+    <string name="btn_busy_prepare">جارٍ التحضير…</string>
+    <string name="btn_busy_catalog">جارٍ الاتصال…</string>
+    <string name="btn_busy_start">جارٍ البدء…</string>
+    <string name="btn_busy_remove">جارٍ الإزالة…</string>
+    <string name="btn_busy_restart">جارٍ إعادة التشغيل…</string>
 </resources>

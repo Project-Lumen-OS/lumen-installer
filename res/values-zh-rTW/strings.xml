@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<!-- Lumen Installer: the catalog texts, the version choice and what a button says while its task runs (the other texts are English for now) -->
 <resources>
     <string name="msg_catalog_missing">還沒有 Lumen OS 版本清單。請將投影機連上網路後再試一次。或選擇一個含有此清單的 LumenOS 資料夾。</string>
     <string name="msg_catalog_loading">正在尋找適用於這台投影機的 Lumen OS 版本。</string>
@@ -18,4 +18,9 @@
     <string name="opt_version_beta_hint">測試版是用於測試的版本，可能有錯誤。它通過同樣的安全檢查。</string>
     <string name="opt_version_beta_only">只有測試版可用</string>
     <string name="msg_check_ok_leftovers_kept">一切正常。需要約 %1$s GB 可用空間，空間足夠。先前的一次 XGIMI 更新在投影機記憶體中留下了約 %2$s MB 的工作檔案。此版本的 Lumen OS 不會清除這些檔案，因此在這台投影機上無法從試用中安裝。試用可以正常使用。要保留 Lumen OS，請使用安裝指南中的電腦安裝程式。</string>
+    <string name="btn_busy_prepare">正在準備…</string>
+    <string name="btn_busy_catalog">連線中…</string>
+    <string name="btn_busy_start">正在啟動…</string>
+    <string name="btn_busy_remove">正在移除…</string>
+    <string name="btn_busy_restart">正在重新啟動…</string>
 </resources>

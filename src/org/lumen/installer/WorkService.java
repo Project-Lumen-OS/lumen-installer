@@ -17,6 +17,7 @@ import org.lumen.installer.core.InstallStep;
 import org.lumen.installer.core.Msg;
 import org.lumen.installer.core.Release;
 import org.lumen.installer.core.StepStatus;
+import org.lumen.installer.core.Task;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,13 +27,14 @@ import java.util.List;
 
 /**
  * Runs the engine off the UI thread, in the foreground (a 1 GB download must survive the screen going to the
- * launcher). One task at a time; the activity reads {@link Snap}.
+ * launcher). One task at a time ({@link Task}, started by the screen behind {@link Snap#gate}, which this service opens
+ * again when the task ends); the activity reads {@link Snap}.
  *   catalog  download the signed catalog of builds again (at the app's start and on Try again)
  *   prepare  check + download + verify + prepare (never writes outside the app's own dir on /data)
  *   start    the same (each step returns at once when already done) + start: gsi_tool install + enable
  *   again    gsi_tool enable --single-boot for an installed trial
  *   remove   gsi_tool wipe
- *   restart  reboot (only from the Restart button)
+ *   restart  reboot (only from the Restart button), returns only when the projector did not go down
  *   stop     pause the running task (the download keeps what it has)
  */
 public class WorkService extends Service {
@@ -87,17 +89,24 @@ public class WorkService extends Service {
     @Override public IBinder onBind(Intent i) { return null; }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
-        final String t = intent == null ? "" : String.valueOf(intent.getAction());
+        final String a = intent == null ? "" : String.valueOf(intent.getAction());
         final Engine e = engine(this);
-        if ("stop".equals(t)) {
+        if ("stop".equals(a)) {
             e.stop();
             if (!Snap.I.busy) stopSelf();
             return START_NOT_STICKY;
         }
         // started with startForegroundService: go foreground at once, even when a task already runs
         startForeground(1, notification());
+        final Task t = Task.of(a);
         synchronized (WorkService.class) {
-            if (Snap.I.busy) return START_NOT_STICKY;
+            if (t == null || Snap.I.busy) {
+                // not run: give the screen its buttons back (the task that runs keeps the gate)
+                if (t != null && t != Snap.I.task) Snap.I.gate.end(t);
+                Snap.I.seq++;
+                if (!Snap.I.busy) { stopForeground(true); stopSelf(); }
+                return START_NOT_STICKY;
+            }
             Snap.I.busy = true;
             Snap.I.task = t;
         }
@@ -106,32 +115,32 @@ public class WorkService extends Service {
         return START_NOT_STICKY;
     }
 
-    private void work(Engine e, String t) {
+    private void work(Engine e, Task t) {
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lumeninstaller:work");
         wl.acquire(3 * 60 * 60 * 1000L);
         try {
             e.resetStop();
             Snap.I.det = e.detect();
-            if ("catalog".equals(t)) {
+            if (t == Task.CATALOG) {
                 if (e.source() == ImageSource.NET) e.refreshCatalog();
                 Snap.I.det = e.detect();
-            } else if ("prepare".equals(t)) {
+            } else if (t == Task.PREPARE) {
                 Snap.I.resetSteps();
                 Snap.I.prepared = e.prepareAll();
                 if (Snap.I.prepared && e.trialOnly()) Snap.I.message(Msg.TRIAL_ONLY, new String[] { e.det.name });
-            } else if ("start".equals(t)) {
+            } else if (t == Task.START) {
                 Snap.I.armed = e.prepareAll() && e.start();
                 Snap.I.prepared = false;
-            } else if ("replace".equals(t)) {
+            } else if (t == Task.REPLACE) {
                 Snap.I.resetSteps();
                 Snap.I.armed = e.removeTrial() && e.prepareAll() && e.start();
                 Snap.I.prepared = false;
-            } else if ("again".equals(t)) {
+            } else if (t == Task.AGAIN) {
                 Snap.I.armed = e.enableAgain();
-            } else if ("remove".equals(t)) {
+            } else if (t == Task.REMOVE) {
                 if (e.removeTrial()) { Snap.I.resetSteps(); Snap.I.armed = false; }
-            } else if ("restart".equals(t)) {
+            } else if (t == Task.RESTART) {
                 e.reboot();
             }
             Snap.I.trial = e.trial;
@@ -146,10 +155,13 @@ public class WorkService extends Service {
             Snap.I.message(Msg.ERROR, new String[] { String.valueOf(ex) });
         } finally {
             try { wl.release(); } catch (RuntimeException ignored) { }
-            Snap.I.busy = false;
-            Snap.I.seq++;
             stopForeground(true);
             stopSelf();
+            Snap.I.busy = false;
+            // the task ended, done or failed: the screen's buttons work again (a restart that went through never
+            // gets here)
+            Snap.I.gate.end(t);
+            Snap.I.seq++;
         }
     }
 

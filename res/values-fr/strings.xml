@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<!-- Lumen Installer: the catalog texts, the version choice and what a button says while its task runs (the other texts are English for now) -->
 <resources>
     <string name="msg_catalog_missing">La liste des versions de Lumen OS n\'est pas encore là. Connectez le projecteur à Internet et réessayez. Ou choisissez un dossier LumenOS qui contient la liste.</string>
     <string name="msg_catalog_loading">Recherche des versions de Lumen OS pour ce projecteur.</string>
@@ -18,4 +18,9 @@
     <string name="opt_version_beta_hint">Une bêta est une version de test. Elle peut contenir des erreurs. Le contrôle de sécurité est le même.</string>
     <string name="opt_version_beta_only">Seule une version bêta est disponible</string>
     <string name="msg_check_ok_leftovers_kept">Tout est en ordre. Il faut environ %1$s Go d\'espace libre et il est là. Une mise à jour XGIMI précédente a laissé environ %2$s Mo de ses fichiers de travail dans la mémoire du projecteur. Cette version de Lumen OS ne les supprime pas, elle ne peut donc pas s\'installer depuis l\'essai sur ce projecteur. L\'essai fonctionne. Pour garder Lumen OS, utilisez l\'installateur pour ordinateur du guide.</string>
+    <string name="btn_busy_prepare">Préparation…</string>
+    <string name="btn_busy_catalog">Connexion…</string>
+    <string name="btn_busy_start">Démarrage…</string>
+    <string name="btn_busy_remove">Suppression…</string>
+    <string name="btn_busy_restart">Redémarrage…</string>
 </resources>

@@ -27,6 +27,11 @@
     <string name="btn_cancel">Отмена</string>
     <string name="btn_back">Назад</string>
     <string name="btn_retry">Повторить</string>
+    <string name="btn_busy_prepare">Подготовка…</string>
+    <string name="btn_busy_catalog">Подключение…</string>
+    <string name="btn_busy_start">Запуск…</string>
+    <string name="btn_busy_remove">Удаление…</string>
+    <string name="btn_busy_restart">Перезапуск…</string>
 
     <string name="confirm_start_title">Запустить Lumen OS на пробу?</string>
     <string name="confirm_start_body">Пробный запуск хранится в памяти проектора в виде файлов. Система XGIMI не меняется. После перезапуска Lumen OS запустится один раз. Следующий перезапуск вернёт систему XGIMI.</string>
@@ -77,6 +82,7 @@
     <string name="msg_removed">Пробный запуск удалён.</string>
     <string name="msg_remove_failed">Пробный запуск не удалён (%1$s).</string>
     <string name="msg_rebooting">Перезапускаем.</string>
+    <string name="msg_reboot_failed">Проектор не перезапустился. Попробуйте снова.</string>
     <string name="msg_stopped">Пауза. Нажмите «Продолжить».</string>
     <string name="msg_error">Что-то пошло не так (%1$s).</string>
 

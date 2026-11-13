@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<!-- Lumen Installer: the catalog texts, the version choice and what a button says while its task runs (the other texts are English for now) -->
 <resources>
     <string name="msg_catalog_missing">Lumen OS のビルド一覧がまだありません。プロジェクターをインターネットにつないで、もう一度お試しください。または、一覧が入った LumenOS フォルダーを選んでください。</string>
     <string name="msg_catalog_loading">このプロジェクター向けの Lumen OS ビルドを探しています。</string>
@@ -18,4 +18,9 @@
     <string name="opt_version_beta_hint">ベータ版はテスト用のバージョンです。不具合がある場合があります。安全確認は同じです。</string>
     <string name="opt_version_beta_only">ベータ版のみがあります</string>
     <string name="msg_check_ok_leftovers_kept">問題ありません。約 %1$s GB の空き容量が必要で、足りています。以前の XGIMI アップデートが、プロジェクターのメモリーに約 %2$s MB の作業ファイルを残しています。このバージョンの Lumen OS はそれを削除しないため、このプロジェクターでは試用からインストールできません。試用は使えます。Lumen OS を残すには、ガイドにあるパソコン用インストーラーを使ってください。</string>
+    <string name="btn_busy_prepare">準備しています…</string>
+    <string name="btn_busy_catalog">接続しています…</string>
+    <string name="btn_busy_start">起動しています…</string>
+    <string name="btn_busy_remove">削除しています…</string>
+    <string name="btn_busy_restart">再起動しています…</string>
 </resources>

@@ -1,11 +1,13 @@
 package org.lumen.installer;
 
+import org.lumen.installer.core.ActionGate;
 import org.lumen.installer.core.Engine;
 import org.lumen.installer.core.ImageSource;
 import org.lumen.installer.core.InstallStep;
 import org.lumen.installer.core.Msg;
 import org.lumen.installer.core.ReleaseChannel;
 import org.lumen.installer.core.StepStatus;
+import org.lumen.installer.core.Task;
 import org.lumen.installer.core.TrialState;
 
 import java.util.ArrayList;
@@ -22,8 +24,11 @@ final class Snap {
     }
 
     volatile int seq;
+    /** the service runs {@link #task} */
     volatile boolean busy;
-    volatile String task = "";
+    volatile Task task;
+    /** one task at a time from the screen: taken by the first press, opened by the service when the task ends */
+    final ActionGate gate = new ActionGate();
     final StepStatus[] steps = new StepStatus[InstallStep.values().length];
     volatile int curStep = -1;
     volatile long done, total;

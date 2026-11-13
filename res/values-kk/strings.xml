@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<!-- Lumen Installer: the catalog texts, the version choice and what a button says while its task runs (the other texts are English for now) -->
 <resources>
     <string name="msg_catalog_missing">Lumen OS жинақтарының тізімі әлі жоқ. Проекторды интернетке қосып, қайталап көріңіз. Немесе осы тізімі бар LumenOS қалтасын таңдаңыз.</string>
     <string name="msg_catalog_loading">Осы проекторға арналған Lumen OS жинақтарын іздеп жатырмыз.</string>
@@ -18,4 +18,9 @@
     <string name="opt_version_beta_hint">Бета сынақ нұсқасы болып табылады. Онда қателер болуы мүмкін. Қауіпсіздік тексеруі сол күйінде.</string>
     <string name="opt_version_beta_only">Тек бета нұсқасы бар</string>
     <string name="msg_check_ok_leftovers_kept">Бәрі дұрыс. Шамамен %1$s ГБ бос орын керек, ол бар. XGIMI-дің бұрынғы жаңартуы проектор жадында шамамен %2$s МБ жұмыс файлдарын қалдырған. Lumen OS-тің бұл нұсқасы оларды жоймайды, сондықтан оны осы проекторда сынақ іске қосудан орнату мүмкін емес. Сынақ іске қосу жұмыс істейді. Lumen OS-ті қалдыру үшін нұсқаулықтағы компьютерге арналған орнатқышты пайдаланыңыз.</string>
+    <string name="btn_busy_prepare">Дайындалуда…</string>
+    <string name="btn_busy_catalog">Қосылуда…</string>
+    <string name="btn_busy_start">Іске қосылуда…</string>
+    <string name="btn_busy_remove">Жойылуда…</string>
+    <string name="btn_busy_restart">Қайта іске қосылуда…</string>
 </resources>

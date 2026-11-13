@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<!-- Lumen Installer: the catalog texts, the version choice and what a button says while its task runs (the other texts are English for now) -->
 <resources>
     <string name="msg_catalog_missing">Списку збірок Lumen OS ще немає. Підключіть проєктор до інтернету і спробуйте ще раз. Або виберіть папку LumenOS, у якій є цей список.</string>
     <string name="msg_catalog_loading">Шукаємо збірки Lumen OS для цього проєктора.</string>
@@ -18,4 +18,9 @@
     <string name="opt_version_beta_hint">Бета є тестовою версією. У ній можуть бути помилки. Перевірка безпеки та сама.</string>
     <string name="opt_version_beta_only">Є тільки бета-версія</string>
     <string name="msg_check_ok_leftovers_kept">Усе гаразд. Потрібно близько %1$s ГБ вільного місця, і воно є. Попереднє оновлення XGIMI залишило в пам\'яті проєктора близько %2$s МБ своїх робочих файлів. Ця версія Lumen OS їх не прибирає, тому встановити її з пробного запуску на цьому проєкторі не можна. Пробний запуск працює. Щоб залишити Lumen OS, скористайтеся інсталятором для комп\'ютера з інструкції.</string>
+    <string name="btn_busy_prepare">Підготовка…</string>
+    <string name="btn_busy_catalog">Підключення…</string>
+    <string name="btn_busy_start">Запуск…</string>
+    <string name="btn_busy_remove">Видалення…</string>
+    <string name="btn_busy_restart">Перезапуск…</string>
 </resources>

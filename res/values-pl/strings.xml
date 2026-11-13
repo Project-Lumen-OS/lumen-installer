@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lumen Installer: the catalog texts and the version choice (the other texts are English for now) -->
+<!-- Lumen Installer: the catalog texts, the version choice and what a button says while its task runs (the other texts are English for now) -->
 <resources>
     <string name="msg_catalog_missing">Listy kompilacji Lumen OS jeszcze nie ma. Podłącz projektor do internetu i spróbuj ponownie. Albo wybierz folder LumenOS, w którym jest ta lista.</string>
     <string name="msg_catalog_loading">Szukamy kompilacji Lumen OS dla tego projektora.</string>
@@ -18,4 +18,9 @@
     <string name="opt_version_beta_hint">Beta jest wersją testową. Mogą w niej być błędy. Przechodzi to samo sprawdzenie bezpieczeństwa.</string>
     <string name="opt_version_beta_only">Dostępna jest tylko wersja beta</string>
     <string name="msg_check_ok_leftovers_kept">Wszystko w porządku. Potrzeba około %1$s GB wolnego miejsca i jest ono dostępne. Wcześniejsza aktualizacja XGIMI zostawiła w pamięci projektora około %2$s MB swoich plików roboczych. Ta wersja Lumen OS ich nie usuwa, dlatego na tym projektorze nie da się jej zainstalować z próbnego uruchomienia. Próbne uruchomienie działa. Aby zostawić Lumen OS, użyj instalatora dla komputera z instrukcji.</string>
+    <string name="btn_busy_prepare">Przygotowywanie…</string>
+    <string name="btn_busy_catalog">Łączenie…</string>
+    <string name="btn_busy_start">Uruchamianie…</string>
+    <string name="btn_busy_remove">Usuwanie…</string>
+    <string name="btn_busy_restart">Ponowne uruchamianie…</string>
 </resources>

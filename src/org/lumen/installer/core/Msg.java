@@ -32,7 +32,7 @@ public enum Msg {
     PREPARED(0), PREPARE_FAILED(1),
     // start / trial management
     TRIAL_ONLY(1), NOT_READY(0), START_FAILED(1), STARTED(0), REMOVED(0), REMOVE_FAILED(1), REBOOTING(0),
-    STOPPED(0), ERROR(1);
+    REBOOT_FAILED(0), STOPPED(0), ERROR(1);
 
     public final int args;
 

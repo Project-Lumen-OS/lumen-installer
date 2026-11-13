@@ -63,6 +63,8 @@ public final class Engine {
         public long retryDelayMs = 2000;
         public long rootTimeoutMs = 45 * 60 * 1000L;
         public long probeTimeoutMs = 3 * 60 * 1000L;
+        /** how long the restart request may take, and then the projector's going down: still running = no restart */
+        public long rebootWaitMs = 60 * 1000L;
         public KeyPair avbKey;                     // tests only; the app makes a new key per run
         public byte[] avbSalt;                     // tests only
     }
@@ -838,10 +840,15 @@ public final class Engine {
         return true;
     }
 
-    public boolean reboot() {
+    /** Restart (only from the Restart button). The projector goes down within seconds of the request, so this returns
+     *  only when it did not: the reason is on the screen and the button is offered again. */
+    public void reboot() {
         l.message(Msg.REBOOTING);
-        Root.Result r = runRoot(new Root.Job("reboot", Root.newNonce()), 60_000L);
-        return r != null && r.done;
+        Root.Result r = runRoot(new Root.Job("reboot", Root.newNonce()), cfg.rebootWaitMs);
+        if (r == null || !r.started) { l.message(Msg.ROOT_UNAVAILABLE); return; }
+        if (r.done) sleep(cfg.rebootWaitMs);
+        l.log("restart: " + (r.done ? "still running after " + cfg.rebootWaitMs + " ms" : r.failCode.isEmpty() ? "no answer" : r.failCode));
+        l.message(Msg.REBOOT_FAILED);
     }
 
     // ------------------------------------------------------------------------------------------------- helpers
