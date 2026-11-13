@@ -9,13 +9,12 @@ projector before it is used. You can try Lumen OS first: the XGIMI system and yo
 
 ## Install the app
 
-1. Download the `.apk` file from the [latest release](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest).
-2. Rename the file: change the ending `.apk` to `.apk1`. The XGIMI file manager may refuse a file that ends in
-   `.apk`. Copy it to a USB stick (FAT32 or exFAT).
-3. Plug the stick into the projector, open the file in the XGIMI file manager and confirm.
+1. Download the Lumen Installer file that ends in `.apk1` from the [latest release](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest)
+   and copy it to a USB stick (FAT32 or exFAT).
+2. Plug the stick into the projector, open the file in the XGIMI file manager and confirm.
    Or with a computer: turn on debugging on the projector, then `adb connect <projector IP>:5555` and
-   `adb install -r` with the downloaded `.apk` file.
-4. Open Lumen Installer on the projector and follow the screen.
+   `adb install -r` with the `.apk` file from the same release.
+3. Open Lumen Installer on the projector and follow the screen.
 
 The app updates over any earlier Lumen Installer. Which projectors and firmware versions are supported is decided by
 the signed list on the [index release](https://github.com/Project-Lumen-OS/lumen-installer/releases/tag/index), not
