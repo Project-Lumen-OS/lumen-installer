@@ -9,8 +9,8 @@
 #
 # Jobs (job.conf: ACTION=, NONCE=, then the parameters the app computed; parsed, never sourced):
 #   probe    read only: what an app cannot see (root, gsi_tool, /metadata/gsi, a trial installed or running, a
-#            pending A/B update, free space of /data in KiB, size of super in KiB); with IMG (+ IMG_SIZE): whether
-#            root reads that file (an image on a USB stick)
+#            pending A/B update and what a finished one left, free space of /data in KiB, size of super in KiB).
+#            With IMG (+ IMG_SIZE): whether root reads that file (an image on a USB stick)
 #   install  `cat IMG TAIL | gsi_tool install --gsi-size TOTAL --userdata-size USERDATA --no-reboot`, then
 #            `gsi_tool enable --single-boot`; writes only the trial's own files (under /data/gsi and /metadata/gsi).
 #            Any failure: `gsi_tool wipe`, nothing stays armed. MODEL: the model code the app found in the signed
@@ -39,6 +39,7 @@ SYSBLOCK=${LI_SYSBLOCK:-/sys/class/block}
 MEDIA_RW=${LI_MEDIA_RW:-/mnt/media_rw}
 DATA_MEDIA=${LI_DATA_MEDIA:-/data/media}
 XGIMICONFIG=${LI_XGIMICONFIG:-/mnt/vendor/xgimiconfig}
+MAPPER=${LI_MAPPER:-/dev/block/mapper}
 
 # The script knows no model: which models may take a trial is the signed list of projectors' (checked by the app).
 # A write job carries the model code the app checked (MODEL) and runs only on a projector that reports that code.
@@ -109,6 +110,29 @@ ota_pending() {
   ls "$METADATA/ota/snapshots" 2>/dev/null | grep -q . && return 0
   return 1
 }
+# What a stock update left, for the app's early word (core/StockUpdate judges it like the trial's Snapshots.java):
+# the state file as hex, the files libsnapshot's RemoveAllUpdateState deletes besides snapshot-boot, every *-cow device
+# first stage mapped from the running table (name:KiB) and libsnapshot's snapshot devices. Read only.
+ota_state_hex() { [ -f "$METADATA/ota/state" ] && od -An -tx1 -v "$METADATA/ota/state" 2>/dev/null | tr -d ' \n'; }
+ota_markers() {
+  for f in rollback-indicator allow-forward-merge old-partition-metadata snapshot-boot-without-slot-switch; do
+    [ -e "$METADATA/ota/$f" ] && printf '%s,' "$f"
+  done
+}
+cow_parts() {
+  for d in "$MAPPER"/*-cow; do
+    [ -e "$d" ] || continue
+    k=$(readlink -f "$d" 2>/dev/null); k=${k##*/}
+    s=$(cat "$SYSBLOCK/$k/size" 2>/dev/null)
+    case "$s" in ''|*[!0-9]*) s=0 ;; esac
+    printf '%s:%s,' "${d##*/}" "$((s / 2))"
+  done
+}
+snap_devs() {
+  for d in "$MAPPER"/*; do
+    case "${d##*/}" in *-base|*-src|*-cow-img|*-user-cow|*-user-cow-init) printf '%s,' "${d##*/}" ;; esac
+  done
+}
 log_cmd() {  # run a command, every output line as LOG, keep its exit code in RC
   t=$HERE/cmd.out
   "$@" >"$t" 2>&1
@@ -147,6 +171,10 @@ probe)
   gsi_installed && kv trial_installed 1 || kv trial_installed 0
   [ -e "$METADATA/gsi/dsu/one_shot_boot" ] && kv trial_one_shot 1 || kv trial_one_shot 0
   ota_pending && kv ota_pending 1 || kv ota_pending 0
+  kv ota_state "$(ota_state_hex)"
+  kv ota_markers "$(ota_markers)"
+  kv cow_parts "$(cow_parts)"
+  kv snap_devs "$(snap_devs)"
   kv data_free_kib "$(free_kib "$DATA")"
   kv super_kib "$(blk_kib super)"
   kv media_rw "$(ls "$MEDIA_RW" 2>/dev/null | tr '\n' ',')"

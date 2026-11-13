@@ -57,9 +57,11 @@
     <string name="msg_root_timeout">Этот шаг шёл слишком долго. Перезапустите проектор и попробуйте снова.</string>
     <string name="msg_root_failed">Этот шаг остановился (%1$s).</string>
     <string name="msg_no_trial_tool">Эта прошивка XGIMI не умеет запускать пробную систему. Ничего не изменилось.</string>
-    <string name="msg_ota_pending">Обновление XGIMI ещё не закончено. Перезапустите проектор один раз и попробуйте снова.</string>
+    <string name="msg_ota_pending">Обновление XGIMI ещё не закончено. Перезапустите проектор один раз и оставьте его включённым в системе XGIMI минут на 20. Потом снова откройте Lumen Installer.</string>
     <string name="msg_trial_installed">Пробный запуск Lumen OS %1$s уже готов на этом проекторе. Чтобы поставить новую версию, нажмите «Поставить новую пробу».</string>
     <string name="msg_trial_installed_other">На проекторе уже есть другая пробная система. Сначала удалите её.</string>
+    <string name="msg_check_ok_leftovers">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть. Прошлое обновление XGIMI оставило в памяти проектора около %2$s МБ своих служебных файлов. Обычно установка убирает их сама, делать ничего не нужно.</string>
+    <string name="msg_leftovers_stick">Прошлое обновление XGIMI оставило в памяти проектора около %1$s МБ своих служебных файлов, и с ними что-то необычно, поэтому Lumen OS их убирать не будет. Сначала верните систему XGIMI флешкой восстановления, потом сразу возвращайтесь сюда. Как сделать флешку, написано в инструкции на странице проекта.</string>
     <string name="msg_check_ok">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть.</string>
     <string name="msg_net_failed">Не удалось связаться с Lumen OS в интернете (%1$s).</string>
     <string name="msg_manifest_bad_sig">Список выпусков Lumen OS не прошёл проверку подлинности. Ничего не скачано.</string>
@@ -129,7 +131,7 @@
     <string name="about_back_title">Как вернуться назад</string>
     <string name="about_back_1">Во время пробы просто перезапустите проектор. Он вернётся к системе XGIMI.</string>
     <string name="about_back_2">Здесь можно удалить пробный запуск, чтобы освободить место.</string>
-    <string name="about_back_3">После установки выберите «Вернуться к системе XGIMI» внутри Lumen OS. Флешка восстановления XGIMI для этой модели тоже всегда работает.</string>
+    <string name="about_back_3">После установки систему XGIMI возвращает флешка восстановления XGIMI для этой модели. Как это сделать, написано в инструкции на странице проекта.</string>
     <string name="about_lic_title">Лицензии</string>
     <string name="about_lic_installer">Lumen Installer и Lumen OS: Apache License 2.0.</string>
     <string name="about_lic_aosp">Android (AOSP) и LineageOS: Apache License 2.0 и другие открытые лицензии.</string>

@@ -42,8 +42,16 @@ get Onest-Variable.ttf "$FONT_URL/Onest%5Bwght%5D.ttf" "$FONT_SHA"
 get OFL-Onest.txt "$FONT_URL/OFL.txt" "$OFL_SHA"
 ST=$HERE/build/stage/LumenInstaller
 rm -rf "$HERE/build/stage"
-mkdir -p "$ST"
-for f in AndroidManifest.xml res src assets; do cp -R "$HERE/$f" "$ST/"; done
+if [ -f "$HERE/app.layers" ]; then
+  # the Lumen OS source tree: the app and the shared source modules its app.layers names, assembled by
+  # tools/devices/assemble_app.py (the public repository has those modules in src/ already)
+  GSI=$(cd "$HERE/../.." && pwd)
+  python3 -B "$GSI/tools/devices/assemble_app.py" --quiet "$HERE/app.layers" --out "$ST" \
+    || { echo "build.sh: app.layers does not assemble" >&2; exit 1; }
+else
+  mkdir -p "$ST"
+  for f in AndroidManifest.xml res src assets; do cp -R "$HERE/$f" "$ST/"; done
+fi
 mkdir -p "$ST/assets/fonts"
 cp "$FD/Onest-Variable.ttf" "$FD/OFL-Onest.txt" "$ST/assets/fonts/"
 KEY_PK8=$K/installerkey.pk8 KEY_PEM=$K/installerkey.x509.pem MIN_SDK=29 TARGET_SDK=29 BUILD_DIR=$HERE/build/out \

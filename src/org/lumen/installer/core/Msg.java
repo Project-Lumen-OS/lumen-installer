@@ -17,6 +17,8 @@ public enum Msg {
     // root side
     ROOT_UNAVAILABLE(0), ROOT_TIMEOUT(0), ROOT_FAILED(1), NO_TRIAL_TOOL(0), OTA_PENDING(0), TRIAL_INSTALLED(1),
     TRIAL_INSTALLED_OTHER(0), CHECK_OK(1),
+    // what a finished XGIMI update left (StockUpdate): cleared by the install / not cleared, the stick (MB)
+    CHECK_OK_LEFTOVERS(2), LEFTOVERS_STICK(1),
     // release (network)
     NET_FAILED(1), MANIFEST_BAD_SIG(0), MANIFEST_BAD(1), MANIFEST_WRONG_DEVICE(1), SUMS_BAD_SIG(0), SUMS_NO_IMAGE(1),
     IMAGE_SIZE_BAD(1), RELEASE_FOUND(2),

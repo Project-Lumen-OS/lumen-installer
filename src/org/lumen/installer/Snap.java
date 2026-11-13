@@ -1,7 +1,12 @@
 package org.lumen.installer;
 
 import org.lumen.installer.core.Engine;
+import org.lumen.installer.core.ImageSource;
+import org.lumen.installer.core.InstallStep;
 import org.lumen.installer.core.Msg;
+import org.lumen.installer.core.ReleaseChannel;
+import org.lumen.installer.core.StepStatus;
+import org.lumen.installer.core.TrialState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +24,7 @@ final class Snap {
     volatile int seq;
     volatile boolean busy;
     volatile String task = "";
-    final Engine.Status[] steps = new Engine.Status[Engine.Step.values().length];
+    final StepStatus[] steps = new StepStatus[InstallStep.values().length];
     volatile int curStep = -1;
     volatile long done, total;
     volatile Line last;
@@ -27,14 +32,14 @@ final class Snap {
     final List<String> log = new ArrayList<>();
     /** set by the worker after a task: what the buttons offer next */
     volatile boolean prepared, armed, canStart, trialOnly;
-    volatile Engine.Trial trial = Engine.Trial.NONE;
+    volatile TrialState trial = TrialState.NONE;
     volatile Engine.Detection det;
     volatile String need = "", free = "";
     /** the image source (download or USB stick folder), the keep-on-stick choice, and whether a stick is in */
-    volatile Engine.Source source = Engine.Source.NET;
+    volatile ImageSource source = ImageSource.NET;
     volatile boolean keepOnStick, stickPresent;
     /** Version: Stable or Beta (download source, a model with a beta channel) */
-    volatile Engine.Channel channel = Engine.Channel.STABLE;
+    volatile ReleaseChannel channel = ReleaseChannel.STABLE;
     /** the list of projectors was asked for once since the app started */
     volatile boolean indexTried;
     /** can the downloaded release install itself from the trial: 1 yes, 0 no, -1 unknown */
@@ -43,7 +48,7 @@ final class Snap {
     Snap() { resetSteps(); }
 
     synchronized void resetSteps() {
-        for (int i = 0; i < steps.length; i++) steps[i] = Engine.Status.WAITING;
+        for (int i = 0; i < steps.length; i++) steps[i] = StepStatus.WAITING;
         curStep = -1;
         done = total = 0;
         lines.clear();
@@ -51,14 +56,14 @@ final class Snap {
         seq++;
     }
 
-    synchronized void step(Engine.Step s, Engine.Status st) {
+    synchronized void step(InstallStep s, StepStatus st) {
         steps[s.ordinal()] = st;
         curStep = s.ordinal();
-        if (st != Engine.Status.RUNNING) { done = 0; total = 0; }
+        if (st != StepStatus.RUNNING) { done = 0; total = 0; }
         seq++;
     }
 
-    synchronized void progress(Engine.Step s, long d, long t) {
+    synchronized void progress(InstallStep s, long d, long t) {
         curStep = s.ordinal();
         done = d;
         total = t;

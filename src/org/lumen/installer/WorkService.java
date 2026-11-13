@@ -12,8 +12,11 @@ import android.os.PowerManager;
 
 import org.lumen.installer.core.Bytes;
 import org.lumen.installer.core.Engine;
+import org.lumen.installer.core.ImageSource;
+import org.lumen.installer.core.InstallStep;
 import org.lumen.installer.core.Msg;
 import org.lumen.installer.core.Release;
+import org.lumen.installer.core.StepStatus;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,9 +49,9 @@ public class WorkService extends Service {
             Engine.Config cfg = new Engine.Config();
             cfg.indexCerts = indexCerts(app);
             engine = new Engine(new AndroidHost(app), cfg, new Engine.Listener() {
-                @Override public void step(Engine.Step s, Engine.Status st) { Snap.I.step(s, st); }
+                @Override public void step(InstallStep s, StepStatus st) { Snap.I.step(s, st); }
                 @Override public void message(Msg m, String... args) { Snap.I.message(m, args); }
-                @Override public void progress(Engine.Step s, long d, long t) { Snap.I.progress(s, d, t); }
+                @Override public void progress(InstallStep s, long d, long t) { Snap.I.progress(s, d, t); }
                 @Override public void log(String line) { Snap.I.log(line); }
             });
         }
@@ -104,7 +107,7 @@ public class WorkService extends Service {
             e.resetStop();
             Snap.I.det = e.detect();
             if ("index".equals(t)) {
-                if (e.source() == Engine.Source.NET) e.refreshIndex();
+                if (e.source() == ImageSource.NET) e.refreshIndex();
                 Snap.I.det = e.detect();
             } else if ("prepare".equals(t)) {
                 Snap.I.resetSteps();

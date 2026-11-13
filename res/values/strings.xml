@@ -61,9 +61,11 @@
     <string name="msg_root_timeout">This step took too long. Restart the projector and try again.</string>
     <string name="msg_root_failed">This step stopped (%1$s).</string>
     <string name="msg_no_trial_tool">This XGIMI firmware cannot start a trial system. Nothing was changed.</string>
-    <string name="msg_ota_pending">An XGIMI update is still being finished. Restart the projector once, then try again.</string>
+    <string name="msg_ota_pending">An XGIMI update is still being finished. Restart the projector once and leave it on in the XGIMI system for about 20 minutes. Then open Lumen Installer again.</string>
     <string name="msg_trial_installed">The Lumen OS %1$s trial is ready on this projector. To try a newer build, press Install the new trial.</string>
     <string name="msg_trial_installed_other">Another trial system is on this projector. Please remove it first.</string>
+    <string name="msg_check_ok_leftovers">All good. About %1$s GB of free space is needed and it is there. An earlier XGIMI update left about %2$s MB of its working files in the projector\'s memory. The install normally clears them by itself, nothing to do.</string>
+    <string name="msg_leftovers_stick">An earlier XGIMI update left about %1$s MB of its working files in the projector\'s memory, and something about them is unusual, so Lumen OS will not clear them. Restore the XGIMI system with the recovery USB stick first, then come back here right away. How to make the stick is in the guide on the project page.</string>
     <string name="msg_check_ok">All good. About %1$s GB of free space is needed and it is there.</string>
     <string name="msg_net_failed">Lumen OS could not be reached online (%1$s).</string>
     <string name="msg_manifest_bad_sig">The Lumen OS release list did not pass the safety check. Nothing was downloaded.</string>
@@ -133,7 +135,7 @@
     <string name="about_back_title">How to go back</string>
     <string name="about_back_1">During the trial just restart the projector. It goes back to the XGIMI system.</string>
     <string name="about_back_2">Remove the trial here to free the space again.</string>
-    <string name="about_back_3">After an install, choose Go back to the XGIMI system inside Lumen OS. The XGIMI recovery USB stick for this model always works too.</string>
+    <string name="about_back_3">After an install, the XGIMI recovery USB stick for this model brings the XGIMI system back. The guide on the project page shows how.</string>
     <string name="about_lic_title">Licenses</string>
     <string name="about_lic_installer">Lumen Installer and Lumen OS: Apache License 2.0.</string>
     <string name="about_lic_aosp">Android (AOSP) and LineageOS: Apache License 2.0 and other open source licenses.</string>

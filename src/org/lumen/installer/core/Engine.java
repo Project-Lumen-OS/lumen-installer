@@ -32,23 +32,14 @@ import java.util.Properties;
  * release, the stick or the root side.
  */
 public final class Engine {
-    public enum Step { CHECK, DOWNLOAD, VERIFY, PREPARE, START }
-    public enum Status { WAITING, RUNNING, DONE, FAILED }
-    public enum Trial { NONE, OURS, OTHER }
-    /** where the image comes from: the signed release on GitHub, or a folder of the same files on a USB stick */
-    public enum Source { NET, STICK }
-    /** which release a download reads ("Version: Stable / Beta", remembered in the state file): the model's stable
-     *  channel, or its beta channel when its entry has one (Index.Entry.asBeta). An entry with a beta only has no choice:
-     *  its beta is read whatever is stored. Beta never applies to a stick folder. */
-    public enum Channel { STABLE, BETA }
 
     /** the folder on the stick: at its root (needs the storage permission) or in the app's own folder on it */
     public static final String KIT_DIR = "LumenOS";
 
     public interface Listener {
-        void step(Step s, Status st);
+        void step(InstallStep s, StepStatus st);
         void message(Msg m, String... args);
-        void progress(Step s, long done, long total);
+        void progress(InstallStep s, long done, long total);
         void log(String line);
     }
 
@@ -98,9 +89,11 @@ public final class Engine {
     public Detection det;
     /** the signed list of projectors in use (null: none verified yet) */
     public Index index;
-    public Trial trial = Trial.NONE;
+    public TrialState trial = TrialState.NONE;
     public String version = "", imageName = "", imageSha = "", imageUrl = "";
     public long imageSize, superBytes, dataFreeBytes;
+    /** KiB of super a finished XGIMI update's leftovers hold, which the trial's install clears (0: none) */
+    public long leftoverKib;
     public boolean virtualAb;
     /** the space plan of the last check, bytes: what /data must hold and its parts */
     public long needData, needSystem, needUserdata, needReserve, needDownload, needMargin, stickFree;
@@ -135,19 +128,19 @@ public final class Engine {
     File indexFile() { return new File(dir, INDEX_NAME); }
     File indexSigFile() { return new File(dir, INDEX_NAME + ".sig"); }
 
-    public Source source() { return "stick".equals(state("source")) ? Source.STICK : Source.NET; }
+    public ImageSource source() { return "stick".equals(state("source")) ? ImageSource.STICK : ImageSource.NET; }
 
     /** net source only: download into the app's own folder on the USB stick instead of /data */
     public boolean keepOnStick() { return "1".equals(state("keep.stick")); }
 
-    public void setSource(Source s) { set("source", s == Source.STICK ? "stick" : "net"); saveState(); }
+    public void setSource(ImageSource s) { set("source", s == ImageSource.STICK ? "stick" : "net"); saveState(); }
 
     public void setKeepOnStick(boolean k) { set("keep.stick", k ? "1" : "0"); saveState(); }
 
     /** Stable unless the user chose Beta (any other stored value is Stable). */
-    public Channel channel() { return "beta".equals(state("channel")) ? Channel.BETA : Channel.STABLE; }
+    public ReleaseChannel channel() { return "beta".equals(state("channel")) ? ReleaseChannel.BETA : ReleaseChannel.STABLE; }
 
-    public void setChannel(Channel c) { set("channel", c == Channel.BETA ? "beta" : "stable"); saveState(); }
+    public void setChannel(ReleaseChannel c) { set("channel", c == ReleaseChannel.BETA ? "beta" : "stable"); saveState(); }
 
     /** is the image our own download (internal or on the stick), which we may delete? Never a stick folder file. */
     boolean imageIsDownload() { return !"stick".equals(state("image.from")); }
@@ -238,7 +231,7 @@ public final class Engine {
         Index best = index;
         Index own = readIndex(indexFile(), indexSigFile(), "kept");
         if (own != null && (best == null || own.serial > best.serial)) best = own;
-        if (source() == Source.STICK) {
+        if (source() == ImageSource.STICK) {
             File kd = kitIndexDir();
             Index k = kd == null ? null : readIndex(new File(kd, INDEX_NAME), new File(kd, INDEX_NAME + ".sig"), "LumenOS folder");
             if (k != null && (best == null || k.serial > best.serial)) {
@@ -298,7 +291,7 @@ public final class Engine {
         Index ix = currentIndex();
         d.indexSerial = ix == null ? 0 : ix.serial;
         Index.Entry base = ix == null ? null : ix.find(d.code);
-        boolean beta = base != null && base.status == Index.Status.SUPPORTED && base.hasBeta() && source() == Source.NET;
+        boolean beta = base != null && base.status == ModelSupport.SUPPORTED && base.hasBeta() && source() == ImageSource.NET;
         d.betaOffered = beta && !base.betaOnly();
         d.betaOnly = beta && base.betaOnly();
         d.model = row(base);
@@ -315,9 +308,9 @@ public final class Engine {
             d.verdict = Msg.INDEX_MISSING;
         } else if (d.model == null) {
             d.verdict = Msg.UNKNOWN_MODEL; d.args = new String[] { code };
-        } else if (d.model.status != Index.Status.SUPPORTED) {
+        } else if (d.model.status != ModelSupport.SUPPORTED) {
             if (d.model.message != null) { d.verdict = Msg.INDEX_NOTE; d.args = d.model.message.clone(); }
-            else if (d.model.status == Index.Status.COMPUTER_ONLY) { d.verdict = Msg.COMPUTER_ONLY; d.args = new String[] { d.model.name }; }
+            else if (d.model.status == ModelSupport.COMPUTER_ONLY) { d.verdict = Msg.COMPUTER_ONLY; d.args = new String[] { d.model.name }; }
             else { d.verdict = Msg.NOT_YET; d.args = new String[] { d.model.name }; }
         } else if (!d.model.board.equals(d.board)) {
             d.verdict = Msg.BOARD_MISMATCH; d.args = new String[] { code, d.board.isEmpty() ? "?" : d.board };
@@ -341,15 +334,15 @@ public final class Engine {
      *  entry has one. An entry with a beta only reads its beta without a choice. A stick folder always uses the
      *  model's entry. */
     Index.Entry row(Index.Entry m) {
-        if (m == null || source() != Source.NET || !m.hasBeta()) return m;
+        if (m == null || source() != ImageSource.NET || !m.hasBeta()) return m;
         if (m.betaOnly()) return m.asBeta();
-        return channel() == Channel.BETA ? m.asBeta() : m;
+        return channel() == ReleaseChannel.BETA ? m.asBeta() : m;
     }
 
     // ------------------------------------------------------------------------------------------------- check
-    private boolean fail(Step s, Msg m, String... args) {
+    private boolean fail(InstallStep s, Msg m, String... args) {
         l.message(m, args);
-        l.step(s, Status.FAILED);
+        l.step(s, StepStatus.FAILED);
         return false;
     }
 
@@ -365,21 +358,21 @@ public final class Engine {
      * nothing except the app's own state file.
      */
     public boolean check() {
-        l.step(Step.CHECK, Status.RUNNING);
-        Source src = source();
+        l.step(InstallStep.CHECK, StepStatus.RUNNING);
+        ImageSource src = source();
         // the download source asks the list of projectors first, every time: what this model may do is the list's
-        if (src == Source.NET && !refreshIndex()) {
-            l.step(Step.CHECK, Status.FAILED);
+        if (src == ImageSource.NET && !refreshIndex()) {
+            l.step(InstallStep.CHECK, StepStatus.FAILED);
             det = detect();
             return false;
         }
         Detection d = detect();
-        if (!d.ok()) return fail(Step.CHECK, d.verdict, d.args);
+        if (!d.ok()) return fail(InstallStep.CHECK, d.verdict, d.args);
         Index.Entry m = d.model;
         List<X509Certificate> certs = m.certs;
         // the stick folder first: pure file reads, verified exactly like the download (same certificates, same rules)
         Kit kit = null;
-        if (src == Source.STICK) {
+        if (src == ImageSource.STICK) {
             kit = findKit(m, certs, d);
             if (kit == null) return false;
         }
@@ -388,19 +381,29 @@ public final class Engine {
         Root.Job probe = new Root.Job("probe", Root.newNonce());
         if (kit != null) probe.put("IMG", kit.image.getAbsolutePath()).put("IMG_SIZE", String.valueOf(kit.image.length()));
         Root.Result pr = runRoot(probe, cfg.probeTimeoutMs);
-        if (pr == null) return fail(Step.CHECK, Msg.ROOT_UNAVAILABLE);
-        if (!pr.done) return fail(Step.CHECK, rootMsg(pr), rootArgs(pr));
-        if (!m.code.equals(pr.kv("model"))) return fail(Step.CHECK, Msg.ROOT_FAILED, "model " + pr.kv("model"));
+        if (pr == null) return fail(InstallStep.CHECK, Msg.ROOT_UNAVAILABLE);
+        if (!pr.done) return fail(InstallStep.CHECK, rootMsg(pr), rootArgs(pr));
+        if (!m.code.equals(pr.kv("model"))) return fail(InstallStep.CHECK, Msg.ROOT_FAILED, "model " + pr.kv("model"));
         // the stock really is this model's (the list says): its product name and its own config folder
         String prod = pr.kv("product");
         if (m.product != null && prod != null && !prod.isEmpty() && !prod.equals(m.product)) {
-            return fail(Step.CHECK, Msg.PRODUCT_MISMATCH, m.code, prod, m.product);
+            return fail(InstallStep.CHECK, Msg.PRODUCT_MISMATCH, m.code, prod, m.product);
         }
         if (m.product != null && (prod == null || prod.isEmpty())) l.log("stock product name empty: not cross-checked with " + m.product);
-        if (m.configCheck && !"1".equals(pr.kv("model_config"))) return fail(Step.CHECK, Msg.MODEL_CONFIG_MISSING, m.code);
-        if (!"1".equals(pr.kv("gsi_tool")) || !"1".equals(pr.kv("metadata_gsi"))) return fail(Step.CHECK, Msg.NO_TRIAL_TOOL);
-        if ("1".equals(pr.kv("trial_running"))) return fail(Step.CHECK, Msg.IN_TRIAL);
-        if ("1".equals(pr.kv("ota_pending"))) return fail(Step.CHECK, Msg.OTA_PENDING);
+        if (m.configCheck && !"1".equals(pr.kv("model_config"))) return fail(InstallStep.CHECK, Msg.MODEL_CONFIG_MISSING, m.code);
+        if (!"1".equals(pr.kv("gsi_tool")) || !"1".equals(pr.kv("metadata_gsi"))) return fail(InstallStep.CHECK, Msg.NO_TRIAL_TOOL);
+        if ("1".equals(pr.kv("trial_running"))) return fail(InstallStep.CHECK, Msg.IN_TRIAL);
+        // a stock update: still being finished (wait in XGIMI), or the leftovers of a finished one (the trial's install
+        // clears them, said here before the ten-minute trial; the trial checks again and alone decides)
+        StockUpdate.Result su = StockUpdate.judge(pr.kv("ota_pending"), pr.kv("ota_state"), pr.kv("ota_markers"), pr.kv("cow_parts"),
+                pr.kv("snap_devs"), pr.kv("slot"));
+        if (su.verdict == StockVerdict.PENDING) { l.log("XGIMI update pending: " + su.why); return fail(InstallStep.CHECK, Msg.OTA_PENDING); }
+        if (su.verdict == StockVerdict.LEFTOVERS_UNSURE) {
+            l.log("leftovers of an XGIMI update (" + su.names + "), not cleared by the install: " + su.why);
+            return fail(InstallStep.CHECK, Msg.LEFTOVERS_STICK, mb(su.cowKib * 1024));
+        }
+        leftoverKib = su.verdict == StockVerdict.LEFTOVERS ? su.cowKib : 0;
+        if (leftoverKib > 0) l.log("leftovers of a finished XGIMI update, cleared by the install: " + su.names);
         superBytes = pr.kvLong("super_kib", 0) * 1024;
         if (superBytes <= 0) {   // unknown: assume a large super, so the check errs on the safe side
             superBytes = 10L << 30;
@@ -412,15 +415,15 @@ public final class Engine {
         set("virtual_ab", virtualAb ? "1" : "0");
         if ("1".equals(pr.kv("trial_installed"))) {
             boolean ours = m.code.equals(state("trial.model")) && !state("trial.version").isEmpty();
-            trial = ours ? Trial.OURS : Trial.OTHER;
+            trial = ours ? TrialState.OURS : TrialState.OTHER;
             saveState();
-            if (ours) return fail(Step.CHECK, Msg.TRIAL_INSTALLED, state("trial.version"));
-            return fail(Step.CHECK, Msg.TRIAL_INSTALLED_OTHER);
+            if (ours) return fail(InstallStep.CHECK, Msg.TRIAL_INSTALLED, state("trial.version"));
+            return fail(InstallStep.CHECK, Msg.TRIAL_INSTALLED_OTHER);
         }
-        trial = Trial.NONE;
+        trial = TrialState.NONE;
         if (!state("trial.version").isEmpty()) { st.remove("trial.version"); st.remove("trial.model"); }
         if (kit != null && !"1".equals(pr.kv("img_readable"))) {
-            return fail(Step.CHECK, Msg.STICK_ROOT_UNREADABLE, kit.image.getPath() + " (" + pr.kv("img_path") + ")");
+            return fail(InstallStep.CHECK, Msg.STICK_ROOT_UNREADABLE, kit.image.getPath() + " (" + pr.kv("img_path") + ")");
         }
 
         File target;   // where the image is (stick) or goes (download)
@@ -444,7 +447,7 @@ public final class Engine {
                 byte[] sig = http.fetch(chan + ".sig", 4096);
                 man = Release.manifest(json, sig, certs, ch);
                 if (!man.vendorOk.contains(d.stock)) {
-                    return fail(Step.CHECK, Msg.STOCK_UNSUPPORTED, d.stock.isEmpty() ? "?" : d.stock, join(man.vendorOk));
+                    return fail(InstallStep.CHECK, Msg.STOCK_UNSUPPORTED, d.stock.isEmpty() ? "?" : d.stock, join(man.vendorOk));
                 }
                 String tag = ch.releaseUrl(man.version);
                 byte[] sums = http.fetch(tag + "SHA256SUMS", 64 * 1024);
@@ -454,14 +457,14 @@ public final class Engine {
                 imageUrl = tag + imageName;
                 imageSize = http.size(imageUrl);
             } catch (Release.Bad b) {
-                return fail(Step.CHECK, b.msg, b.msg.args == 0 ? new String[0] : new String[] { b.arg == null ? "" : b.arg });
+                return fail(InstallStep.CHECK, b.msg, b.msg.args == 0 ? new String[0] : new String[] { b.arg == null ? "" : b.arg });
             } catch (IOException e) {
-                return fail(Step.CHECK, Msg.NET_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
+                return fail(InstallStep.CHECK, Msg.NET_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
             }
             version = man.version;
             if (keepOnStick()) {
                 List<Host.Volume> v = host.volumes();
-                if (v.isEmpty()) return fail(Step.CHECK, Msg.NO_STICK);
+                if (v.isEmpty()) return fail(InstallStep.CHECK, Msg.NO_STICK);
                 target = new File(v.get(0).appDir, "image.img");
                 from = "download-stick";
             } else {
@@ -470,7 +473,7 @@ public final class Engine {
             }
         }
         if (imageSize <= 0 || imageSize % AvbTail.BS != 0 || imageSize > (4L << 30)) {
-            return fail(Step.CHECK, Msg.IMAGE_SIZE_BAD, String.valueOf(imageSize));
+            return fail(InstallStep.CHECK, Msg.IMAGE_SIZE_BAD, String.valueOf(imageSize));
         }
         // another release, another model or another place: the old download is dropped (a stick folder file never)
         if (!imageSha.equals(state("image.sha")) || !m.code.equals(state("model"))
@@ -510,15 +513,16 @@ public final class Engine {
         saveState();
         l.message(Msg.SPACE_PLAN, gb(needData), gb(free), gb(needSystem), gb(needUserdata), gb(needReserve), gb(needDownload),
                 gb(needMargin));
-        if (free < needData) return fail(Step.CHECK, Msg.NO_SPACE, gb(needData), gb(free));
+        if (free < needData) return fail(InstallStep.CHECK, Msg.NO_SPACE, gb(needData), gb(free));
         if (onStick) {
             File sd = target.getParentFile();
             if (sd != null && !sd.isDirectory()) sd.mkdirs();
             stickFree = host.freeBytes(sd);
-            if (stickFree < rest) return fail(Step.CHECK, Msg.STICK_NO_ROOM, gb(rest), gb(stickFree));
+            if (stickFree < rest) return fail(InstallStep.CHECK, Msg.STICK_NO_ROOM, gb(rest), gb(stickFree));
         }
-        l.message(Msg.CHECK_OK, gb(needData));
-        l.step(Step.CHECK, Status.DONE);
+        if (leftoverKib > 0) l.message(Msg.CHECK_OK_LEFTOVERS, gb(needData), mb(leftoverKib * 1024));
+        else l.message(Msg.CHECK_OK, gb(needData));
+        l.step(InstallStep.CHECK, StepStatus.DONE);
         return true;
     }
 
@@ -531,7 +535,7 @@ public final class Engine {
      */
     Kit findKit(Index.Entry m, List<X509Certificate> certs, Detection d) {
         List<Host.Volume> vols = host.kitVolumes();
-        if (vols.isEmpty()) { fail(Step.CHECK, Msg.STICK_NOT_FOUND); return null; }
+        if (vols.isEmpty()) { fail(InstallStep.CHECK, Msg.STICK_NOT_FOUND); return null; }
         File dirFound = null;
         boolean perm = host.canReadSticks(), blocked = false;
         for (Host.Volume v : vols) {
@@ -545,7 +549,7 @@ public final class Engine {
             if (dirFound == null && new File(own, "SHA256SUMS").canRead()) dirFound = own;
         }
         if (dirFound == null) {
-            fail(Step.CHECK, blocked || !perm ? Msg.STICK_NO_ACCESS : Msg.STICK_NOT_FOUND);
+            fail(InstallStep.CHECK, blocked || !perm ? Msg.STICK_NO_ACCESS : Msg.STICK_NOT_FOUND);
             return null;
         }
         l.log("stick folder " + dirFound);
@@ -571,25 +575,25 @@ public final class Engine {
             File ms = new File(mf.getPath() + ".sig");
             if (mf.exists()) {
                 Release.Manifest man = Release.manifest(Bytes.readFile(mf, 256 * 1024), ms.canRead() ? Bytes.readFile(ms, 4096) : null, certs, mc);
-                if (!man.version.equals(k.version)) { fail(Step.CHECK, Msg.STICK_MISMATCH, man.version, k.version); return null; }
+                if (!man.version.equals(k.version)) { fail(InstallStep.CHECK, Msg.STICK_MISMATCH, man.version, k.version); return null; }
                 k.vendorOk = man.vendorOk;
             } else {
                 k.vendorOk = m.stockVersions();
             }
         } catch (Release.Bad b) {
-            fail(Step.CHECK, b.msg, b.msg.args == 0 ? new String[0] : new String[] { b.arg == null ? "" : b.arg });
+            fail(InstallStep.CHECK, b.msg, b.msg.args == 0 ? new String[0] : new String[] { b.arg == null ? "" : b.arg });
             return null;
         } catch (IOException e) {
-            fail(Step.CHECK, Msg.STICK_NO_ACCESS);
+            fail(InstallStep.CHECK, Msg.STICK_NO_ACCESS);
             l.log("stick: " + e.getMessage());
             return null;
         }
         if (!k.vendorOk.contains(d.stock)) {
-            fail(Step.CHECK, Msg.STOCK_UNSUPPORTED, d.stock.isEmpty() ? "?" : d.stock, join(k.vendorOk));
+            fail(InstallStep.CHECK, Msg.STOCK_UNSUPPORTED, d.stock.isEmpty() ? "?" : d.stock, join(k.vendorOk));
             return null;
         }
         k.image = new File(dirFound, k.name);
-        if (!k.image.isFile() || !k.image.canRead()) { fail(Step.CHECK, Msg.STICK_NO_IMAGE, k.name); return null; }
+        if (!k.image.isFile() || !k.image.canRead()) { fail(InstallStep.CHECK, Msg.STICK_NO_IMAGE, k.name); return null; }
         l.message(Msg.STICK_FOUND, k.version, mb(k.image.length()), dirFound.getPath());
         return k;
     }
@@ -602,51 +606,51 @@ public final class Engine {
 
     // ------------------------------------------------------------------------------------------------- download
     public boolean download() {
-        l.step(Step.DOWNLOAD, Status.RUNNING);
+        l.step(InstallStep.DOWNLOAD, StepStatus.RUNNING);
         if ("stick".equals(state("image.from"))) {   // the stick folder's image is used where it is: nothing to download
             File f = imageFile();
-            if (imageSize <= 0 || f.length() != imageSize) return fail(Step.DOWNLOAD, Msg.NOT_READY);
-            l.progress(Step.DOWNLOAD, imageSize, imageSize);
+            if (imageSize <= 0 || f.length() != imageSize) return fail(InstallStep.DOWNLOAD, Msg.NOT_READY);
+            l.progress(InstallStep.DOWNLOAD, imageSize, imageSize);
             l.message(Msg.FROM_STICK, mb(imageSize));
-            l.step(Step.DOWNLOAD, Status.DONE);
+            l.step(InstallStep.DOWNLOAD, StepStatus.DONE);
             return true;
         }
-        if (imageUrl.isEmpty() || imageSize <= 0) return fail(Step.DOWNLOAD, Msg.NOT_READY);
+        if (imageUrl.isEmpty() || imageSize <= 0) return fail(InstallStep.DOWNLOAD, Msg.NOT_READY);
         File f = imageFile();
         if (state("image.verified").equals(imageSha) && f.length() == imageSize) {
-            l.progress(Step.DOWNLOAD, imageSize, imageSize);
+            l.progress(InstallStep.DOWNLOAD, imageSize, imageSize);
             l.message(Msg.DOWNLOADED, mb(imageSize));
-            l.step(Step.DOWNLOAD, Status.DONE);
+            l.step(InstallStep.DOWNLOAD, StepStatus.DONE);
             return true;
         }
         long have = f.exists() ? f.length() : 0;
         boolean onStick = "download-stick".equals(state("image.from"));
         File fd = f.getParentFile();
-        if (fd != null && !fd.isDirectory() && !fd.mkdirs()) return fail(Step.DOWNLOAD, Msg.NO_STICK);
+        if (fd != null && !fd.isDirectory() && !fd.mkdirs()) return fail(InstallStep.DOWNLOAD, Msg.NO_STICK);
         // the download needs room where it goes; the tail always goes to the app's dir on /data
         long rest = imageSize - Math.min(have, imageSize);
         long room = onStick ? host.freeBytes(fd) - rest : host.freeBytes(dir) - rest - tailEstimate(imageSize);
         if (room < 0) {
-            if (onStick) return fail(Step.DOWNLOAD, Msg.STICK_NO_ROOM, gb(rest), gb(host.freeBytes(fd)));
-            return fail(Step.DOWNLOAD, Msg.NO_SPACE, gb(imageSize + tailEstimate(imageSize)), gb(host.freeBytes(dir)));
+            if (onStick) return fail(InstallStep.DOWNLOAD, Msg.STICK_NO_ROOM, gb(rest), gb(host.freeBytes(fd)));
+            return fail(InstallStep.DOWNLOAD, Msg.NO_SPACE, gb(imageSize + tailEstimate(imageSize)), gb(host.freeBytes(dir)));
         }
         String last = "";
         for (int attempt = 0; attempt <= cfg.retries; attempt++) {
-            if (stop) return stopped(Step.DOWNLOAD);
+            if (stop) return stopped(InstallStep.DOWNLOAD);
             try {
                 http.lastEtag = "";
                 String tag = http.download(imageUrl, f, imageSize, state("image.etag"), new Http.Progress() {
-                    @Override public void at(long done, long total) { l.progress(Step.DOWNLOAD, done, total); }
+                    @Override public void at(long done, long total) { l.progress(InstallStep.DOWNLOAD, done, total); }
                 }, stopper);
                 set("image.etag", tag);
                 saveState();
                 if (f.length() != imageSize) throw new IOException("size " + f.length());
                 l.message(Msg.DOWNLOADED, mb(imageSize));
-                l.step(Step.DOWNLOAD, Status.DONE);
+                l.step(InstallStep.DOWNLOAD, StepStatus.DONE);
                 return true;
             } catch (Bytes.Stopped e) {
                 if (!http.lastEtag.isEmpty()) { set("image.etag", http.lastEtag); saveState(); }
-                return stopped(Step.DOWNLOAD);
+                return stopped(InstallStep.DOWNLOAD);
             } catch (IOException e) {
                 if (!http.lastEtag.isEmpty()) { set("image.etag", http.lastEtag); saveState(); }
                 last = e.getMessage() == null ? e.toString() : e.getMessage();
@@ -658,40 +662,40 @@ public final class Engine {
                 sleep(cfg.retryDelayMs * (1L << Math.min(attempt, 4)));
             }
         }
-        return fail(Step.DOWNLOAD, Msg.DOWNLOAD_INTERRUPTED, last);
+        return fail(InstallStep.DOWNLOAD, Msg.DOWNLOAD_INTERRUPTED, last);
     }
 
-    private boolean stopped(Step s) {
+    private boolean stopped(InstallStep s) {
         l.message(Msg.STOPPED);
-        l.step(s, Status.WAITING);
+        l.step(s, StepStatus.WAITING);
         return false;
     }
 
     // ------------------------------------------------------------------------------------------------- verify
     public boolean verify() {
-        l.step(Step.VERIFY, Status.RUNNING);
+        l.step(InstallStep.VERIFY, StepStatus.RUNNING);
         File f = imageFile();
-        if (imageSha.isEmpty() || f.length() != imageSize) return fail(Step.VERIFY, Msg.NOT_READY);
+        if (imageSha.isEmpty() || f.length() != imageSize) return fail(InstallStep.VERIFY, Msg.NOT_READY);
         if (verified()) {   // verified earlier in this download (the file is in the app's private dir)
             l.message(Msg.VERIFIED);
             handoverMessage(parseLong(state("image.handover")));
-            l.step(Step.VERIFY, Status.DONE);
+            l.step(InstallStep.VERIFY, StepStatus.DONE);
             return true;
         }
         String got;
         try {
             got = Bytes.sha256File(f, new Bytes.Progress() {
-                @Override public void at(long done, long total) { l.progress(Step.VERIFY, done, total); }
+                @Override public void at(long done, long total) { l.progress(InstallStep.VERIFY, done, total); }
             }, stopper);
         } catch (Bytes.Stopped e) {
-            return stopped(Step.VERIFY);
+            return stopped(InstallStep.VERIFY);
         } catch (IOException e) {
-            return fail(Step.VERIFY, Msg.ERROR, e.getMessage());
+            return fail(InstallStep.VERIFY, Msg.ERROR, e.getMessage());
         }
         if (!got.equals(imageSha)) {
             l.log("sha256 " + got + " != " + imageSha);
             forgetImage();   // a download is deleted; a stick folder file stays where it is (the user replaces it)
-            return fail(Step.VERIFY, Msg.SHA_MISMATCH);
+            return fail(InstallStep.VERIFY, Msg.SHA_MISMATCH);
         }
         set("image.verified", imageSha);
         set("image.mtime", String.valueOf(f.lastModified()));
@@ -700,7 +704,7 @@ public final class Engine {
         saveState();
         l.message(Msg.VERIFIED);
         handoverMessage(h);
-        l.step(Step.VERIFY, Status.DONE);
+        l.step(InstallStep.VERIFY, StepStatus.DONE);
         return true;
     }
 
@@ -721,11 +725,11 @@ public final class Engine {
 
     // ------------------------------------------------------------------------------------------------- prepare
     public boolean prepare() {
-        l.step(Step.PREPARE, Status.RUNNING);
-        if (!verified()) return fail(Step.PREPARE, Msg.NOT_READY);
+        l.step(InstallStep.PREPARE, StepStatus.RUNNING);
+        if (!verified()) return fail(InstallStep.PREPARE, Msg.NOT_READY);
         if (prepared()) {
             l.message(Msg.PREPARED);
-            l.step(Step.PREPARE, Status.DONE);
+            l.step(InstallStep.PREPARE, StepStatus.DONE);
             return true;
         }
         File tail = tailFile();
@@ -733,7 +737,7 @@ public final class Engine {
             KeyPair key = cfg.avbKey != null ? cfg.avbKey : AvbTail.newKey();
             byte[] salt = cfg.avbSalt != null ? cfg.avbSalt : AvbTail.newSalt();
             AvbTail.Result r = AvbTail.build(imageFile(), tail, salt, key, new Bytes.Progress() {
-                @Override public void at(long done, long total) { l.progress(Step.PREPARE, done, total); }
+                @Override public void at(long done, long total) { l.progress(InstallStep.PREPARE, done, total); }
             }, stopper);
             AvbTail.selfCheck(tail, imageSize);
             set("tail.sha", r.tailSha256);
@@ -743,13 +747,13 @@ public final class Engine {
             l.log("AVB footer: tree " + r.treeSize + " B, vbmeta " + r.vbmetaSize + " B, trial image " + r.total + " B");
         } catch (Bytes.Stopped e) {
             tail.delete();
-            return stopped(Step.PREPARE);
+            return stopped(InstallStep.PREPARE);
         } catch (Exception e) {
             tail.delete();
-            return fail(Step.PREPARE, Msg.PREPARE_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
+            return fail(InstallStep.PREPARE, Msg.PREPARE_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
         }
         l.message(Msg.PREPARED);
-        l.step(Step.PREPARE, Status.DONE);
+        l.step(InstallStep.PREPARE, StepStatus.DONE);
         return true;
     }
 
@@ -779,10 +783,10 @@ public final class Engine {
     // ------------------------------------------------------------------------------------------------- start
     /** The only step that writes outside the app: the trial goes into /data/gsi and one boot is armed. */
     public boolean start() {
-        l.step(Step.START, Status.RUNNING);
-        if (det == null || !det.ok()) return fail(Step.START, Msg.NOT_READY);
-        if (!canStart()) return fail(Step.START, Msg.START_PILOT, det.model.name);
-        if (!prepared()) return fail(Step.START, Msg.NOT_READY);
+        l.step(InstallStep.START, StepStatus.RUNNING);
+        if (det == null || !det.ok()) return fail(InstallStep.START, Msg.NOT_READY);
+        if (!canStart()) return fail(InstallStep.START, Msg.START_PILOT, det.model.name);
+        if (!prepared()) return fail(InstallStep.START, Msg.NOT_READY);
         long total = imageSize + Long.parseLong(state("tail.size"));
         long superB = parseLong(state("super.kib")) * 1024;
         long need = total + cfg.userdataBytes + ("1".equals(state("virtual_ab")) ? superB : 0) + cfg.marginBytes;
@@ -798,32 +802,32 @@ public final class Engine {
                 .put("NEED_KIB", String.valueOf(need / 1024))
                 .put("MODEL", det.model.code);
         Root.Result r = runRoot(j, cfg.rootTimeoutMs);
-        if (r == null) return fail(Step.START, Msg.ROOT_UNAVAILABLE);
-        if (!r.done) return fail(Step.START, Msg.START_FAILED, r.failCode.isEmpty() ? "timeout" : r.failCode);
+        if (r == null) return fail(InstallStep.START, Msg.ROOT_UNAVAILABLE);
+        if (!r.done) return fail(InstallStep.START, Msg.START_FAILED, r.failCode.isEmpty() ? "timeout" : r.failCode);
         set("trial.version", version);
         set("trial.model", det.model.code);
         saveState();
-        trial = Trial.OURS;
+        trial = TrialState.OURS;
         // the trial has its own copy now: free the /data the download took; an image on the stick (its folder, or the
         // download kept there) stays for another trial, only the tail goes
         if ("download".equals(state("image.from").isEmpty() ? "download" : state("image.from"))) forgetImage();
         else forgetTail();
         l.message(Msg.STARTED);
-        l.step(Step.START, Status.DONE);
+        l.step(InstallStep.START, StepStatus.DONE);
         return true;
     }
 
     /** Arm the installed trial for one more boot (gsi_tool enable --single-boot). */
     public boolean enableAgain() {
-        l.step(Step.START, Status.RUNNING);
-        if (det == null || det.model == null || !canStart()) return fail(Step.START, Msg.START_PILOT, det == null ? "?" : det.name);
+        l.step(InstallStep.START, StepStatus.RUNNING);
+        if (det == null || det.model == null || !canStart()) return fail(InstallStep.START, Msg.START_PILOT, det == null ? "?" : det.name);
         // only a trial this app installed for this model (never another one)
-        if (state("trial.version").isEmpty() || !det.model.code.equals(state("trial.model"))) return fail(Step.START, Msg.NOT_READY);
+        if (state("trial.version").isEmpty() || !det.model.code.equals(state("trial.model"))) return fail(InstallStep.START, Msg.NOT_READY);
         Root.Result r = runRoot(new Root.Job("enable", Root.newNonce()).put("MODEL", det.model.code), cfg.probeTimeoutMs);
-        if (r == null) return fail(Step.START, Msg.ROOT_UNAVAILABLE);
-        if (!r.done) return fail(Step.START, Msg.START_FAILED, r.failCode);
+        if (r == null) return fail(InstallStep.START, Msg.ROOT_UNAVAILABLE);
+        if (!r.done) return fail(InstallStep.START, Msg.START_FAILED, r.failCode);
         l.message(Msg.STARTED);
-        l.step(Step.START, Status.DONE);
+        l.step(InstallStep.START, StepStatus.DONE);
         return true;
     }
 
@@ -834,7 +838,7 @@ public final class Engine {
         st.remove("trial.version");
         st.remove("trial.model");
         saveState();
-        trial = Trial.NONE;
+        trial = TrialState.NONE;
         l.message(Msg.REMOVED);
         return true;
     }

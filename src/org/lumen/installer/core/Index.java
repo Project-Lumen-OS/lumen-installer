@@ -34,7 +34,6 @@ import java.util.regex.Pattern;
 public final class Index {
     public static final String KIND = "lumen-installer-devices";
 
-    public enum Status { SUPPORTED, NOT_YET, COMPUTER_ONLY }
 
     public static final class Bad extends Exception {
         public final Msg msg;
@@ -75,7 +74,7 @@ public final class Index {
 
     public static final class Entry {
         public final String code, board, name;
-        public final Status status;
+        public final ModelSupport status;
         /** the stock ro.vendor.xgimi.product.name of this model (another one = a cross-flash), null = not checked */
         public final String product;
         /** the stock vendor must have /mnt/vendor/xgimiconfig/&lt;code&gt;/system.ini (root probe model_config) */
@@ -90,7 +89,7 @@ public final class Index {
         /** this entry reads its beta channel (made by {@link #asBeta()}) */
         public final boolean isBeta;
 
-        Entry(String code, String board, String name, Status status, String product, boolean configCheck, List<Stock> stock,
+        Entry(String code, String board, String name, ModelSupport status, String product, boolean configCheck, List<Stock> stock,
               Map<String, String[]> refused, Channel stable, Channel beta, List<X509Certificate> certs, String[] message, boolean isBeta) {
             this.code = code; this.board = board; this.name = name; this.status = status; this.product = product;
             this.configCheck = configCheck; this.stock = stock; this.refused = refused; this.stable = stable; this.beta = beta;
@@ -212,13 +211,13 @@ public final class Index {
         String code = match(m, "model", CODE);
         String name = match(m, "name", NAME);
         String st = Json.str(m, "status");
-        Status status;
-        if ("supported".equals(st)) status = Status.SUPPORTED;
-        else if ("not_yet".equals(st)) status = Status.NOT_YET;
-        else if ("computer_only".equals(st)) status = Status.COMPUTER_ONLY;
+        ModelSupport status;
+        if ("supported".equals(st)) status = ModelSupport.SUPPORTED;
+        else if ("not_yet".equals(st)) status = ModelSupport.NOT_YET;
+        else if ("computer_only".equals(st)) status = ModelSupport.COMPUTER_ONLY;
         else throw new IllegalArgumentException(code + " status " + st);
         String[] message = text(m.get("message"), code + " message");
-        if (status != Status.SUPPORTED) {
+        if (status != ModelSupport.SUPPORTED) {
             String board = m.get("board") == null ? "" : match(m, "board", BOARD);
             return new Entry(code, board, name, status, null, false, Collections.<Stock>emptyList(),
                     Collections.<String, String[]>emptyMap(), null, null, Collections.<X509Certificate>emptyList(), message, false);

@@ -22,7 +22,11 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.lumen.installer.core.Engine;
+import org.lumen.installer.core.ImageSource;
 import org.lumen.installer.core.Msg;
+import org.lumen.installer.core.ReleaseChannel;
+import org.lumen.installer.core.StepStatus;
+import org.lumen.installer.core.TrialState;
 
 import java.util.List;
 
@@ -141,7 +145,7 @@ public class MainActivity extends Activity {
         s.source = e.source();
         // the signed list of projectors: asked for once per start of the app (it says which models exist and what
         // each may do); the last verified copy is used until it arrives
-        if (!s.indexTried && !s.busy && s.source == Engine.Source.NET) {
+        if (!s.indexTried && !s.busy && s.source == ImageSource.NET) {
             s.indexTried = true;
             run("index");
         }
@@ -197,19 +201,19 @@ public class MainActivity extends Activity {
         }
         status.setText(sb.toString());
         for (int i = 0; i < 5; i++) {
-            Engine.Status st = s.steps[i];
-            stepMark[i].setText(st == Engine.Status.DONE ? "\u2713" : st == Engine.Status.FAILED ? "\u2717"
-                    : st == Engine.Status.RUNNING ? "\u25CF" : "\u25CB");
-            stepMark[i].setTextColor(st == Engine.Status.DONE ? OK : st == Engine.Status.FAILED ? BAD
-                    : st == Engine.Status.RUNNING ? ACCENT : DIM);
+            StepStatus st = s.steps[i];
+            stepMark[i].setText(st == StepStatus.DONE ? "\u2713" : st == StepStatus.FAILED ? "\u2717"
+                    : st == StepStatus.RUNNING ? "\u25CF" : "\u25CB");
+            stepMark[i].setTextColor(st == StepStatus.DONE ? OK : st == StepStatus.FAILED ? BAD
+                    : st == StepStatus.RUNNING ? ACCENT : DIM);
             stepInfo[i].setText("");
         }
         int cur = s.curStep;
-        if (cur >= 0 && s.total > 0 && s.steps[cur] == Engine.Status.RUNNING) {
+        if (cur >= 0 && s.total > 0 && s.steps[cur] == StepStatus.RUNNING) {
             bar.setIndeterminate(false);
             bar.setProgress((int) (s.done * 1000 / s.total));
             stepInfo[cur].setText(cur == 1 ? (s.done >> 20) + " / " + (s.total >> 20) + " MB" : (s.done * 100 / s.total) + "%");
-        } else if (s.busy && cur >= 0 && s.steps[cur] == Engine.Status.RUNNING) {
+        } else if (s.busy && cur >= 0 && s.steps[cur] == StepStatus.RUNNING) {
             bar.setIndeterminate(true);
         } else {
             bar.setIndeterminate(false);
@@ -226,10 +230,10 @@ public class MainActivity extends Activity {
         else if (d != null && d.verdict == Msg.INDEX_MISSING) key = "noindex";
         else if (d == null || !d.ok()) key = "close";
         else if (s.armed) key = "armed";
-        else if (s.trial == Engine.Trial.OURS) key = "ours";
-        else if (s.trial == Engine.Trial.OTHER) key = "other";
+        else if (s.trial == TrialState.OURS) key = "ours";
+        else if (s.trial == TrialState.OTHER) key = "other";
         else if (s.prepared) key = s.canStart ? "ready" : "pilot";
-        else key = s.steps[0] == Engine.Status.WAITING ? "idle" : "continue";
+        else key = s.steps[0] == StepStatus.WAITING ? "idle" : "continue";
         renderOptions(s, key);
         if (key.equals(buttonKey)) { linkFocus(); return; }
         buttonKey = key;
@@ -246,7 +250,7 @@ public class MainActivity extends Activity {
             // no verified list of projectors yet: ask again (download), or read the LumenOS folder's list (stick)
             first = add(R.string.btn_retry, v -> {
                 if (Snap.I.busy) return;
-                if (Snap.I.source == Engine.Source.NET) { run("index"); return; }
+                if (Snap.I.source == ImageSource.NET) { run("index"); return; }
                 Snap.I.det = WorkService.engine(this).detect();
                 Snap.I.seq++;
                 render();
@@ -264,7 +268,7 @@ public class MainActivity extends Activity {
             String keep = getString(s.handover == 1 ? R.string.confirm_keep_yes : R.string.confirm_keep_no);
             String space = s.need.isEmpty() ? "" : " " + getString(R.string.confirm_space, Engine.gb(Engine.parseLongSafe(s.need)),
                     Engine.gb(Engine.parseLongSafe(s.free)));
-            String stick = s.source == Engine.Source.STICK || s.keepOnStick ? " " + getString(R.string.confirm_stick) : "";
+            String stick = s.source == ImageSource.STICK || s.keepOnStick ? " " + getString(R.string.confirm_stick) : "";
             // the list says the install from the trial is not open yet for this model and stock: said before the start
             String only = s.trialOnly ? " " + getString(R.string.confirm_trial_only, d.name) : "";
             first = add(R.string.btn_start, v -> confirm(R.string.confirm_start_title,
@@ -325,9 +329,9 @@ public class MainActivity extends Activity {
      *  with a stick in, whether the download goes to the stick. */
     void renderOptions(Snap s, String key) {
         boolean show = "idle".equals(key) || "continue".equals(key) || "noindex".equals(key);
-        boolean beta = show && s.source == Engine.Source.NET && s.det != null && s.det.betaOffered;
-        boolean only = show && s.source == Engine.Source.NET && s.det != null && s.det.betaOnly;
-        boolean keep = show && s.source == Engine.Source.NET && s.stickPresent;
+        boolean beta = show && s.source == ImageSource.NET && s.det != null && s.det.betaOffered;
+        boolean only = show && s.source == ImageSource.NET && s.det != null && s.det.betaOnly;
+        boolean keep = show && s.source == ImageSource.NET && s.stickPresent;
         String k = show ? s.source + "|" + s.keepOnStick + "|" + s.stickPresent + "|" + (beta ? s.channel : only ? "only" : "-") : "";
         if (k.equals(optionsKey)) return;
         optionsKey = k;
@@ -338,16 +342,16 @@ public class MainActivity extends Activity {
         version.removeAllViews();
         version.setVisibility(beta || only || keep ? View.VISIBLE : View.GONE);
         if (!show) return;
-        addTo(options, s.source == Engine.Source.STICK ? R.string.opt_source_stick : R.string.opt_source_net, v -> {
+        addTo(options, s.source == ImageSource.STICK ? R.string.opt_source_stick : R.string.opt_source_net, v -> {
             if (Snap.I.busy) return;
-            Engine.Source n = Snap.I.source == Engine.Source.STICK ? Engine.Source.NET : Engine.Source.STICK;
+            ImageSource n = Snap.I.source == ImageSource.STICK ? ImageSource.NET : ImageSource.STICK;
             Engine e = WorkService.engine(this);
             e.setSource(n);
             Snap.I.source = n;
             Snap.I.det = e.detect();   // the row in use depends on the source (Beta never applies to a stick folder)
             Snap.I.resetSteps();
             Snap.I.prepared = false;
-            if (n == Engine.Source.STICK && checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            if (n == ImageSource.STICK && checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[] { Manifest.permission.READ_EXTERNAL_STORAGE }, 1);
             }
             render();
@@ -355,9 +359,9 @@ public class MainActivity extends Activity {
         View focus = null;
         if (beta) {
             // Version: Stable (the model's normal releases) or Beta (test builds, the same safety check); remembered
-            Button b = addTo(row(), s.channel == Engine.Channel.BETA ? R.string.opt_version_beta : R.string.opt_version_stable, v -> {
+            Button b = addTo(row(), s.channel == ReleaseChannel.BETA ? R.string.opt_version_beta : R.string.opt_version_stable, v -> {
                 if (Snap.I.busy) return;
-                Engine.Channel n = Snap.I.channel == Engine.Channel.BETA ? Engine.Channel.STABLE : Engine.Channel.BETA;
+                ReleaseChannel n = Snap.I.channel == ReleaseChannel.BETA ? ReleaseChannel.STABLE : ReleaseChannel.BETA;
                 Engine e = WorkService.engine(this);
                 e.setChannel(n);
                 Snap.I.channel = n;
@@ -368,7 +372,7 @@ public class MainActivity extends Activity {
             });
             b.setTag("version");
             if ("version".equals(tag)) focus = b;
-            TextView hint = text(getString(s.channel == Engine.Channel.BETA ? R.string.opt_version_beta_hint : R.string.opt_version_stable_hint), 12, DIM);
+            TextView hint = text(getString(s.channel == ReleaseChannel.BETA ? R.string.opt_version_beta_hint : R.string.opt_version_stable_hint), 12, DIM);
             version.addView(hint, lp(0, dp(8), 0, 0));
         } else if (only) {
             // a model with a beta only: no Stable / Beta choice, one line (the beta is read without a choice)
