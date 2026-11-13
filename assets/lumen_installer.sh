@@ -143,7 +143,7 @@ log_cmd() {  # run a command, every output line as LOG, keep its exit code in RC
 # a write job only for the model the app checked: MODEL must be a model code and the projector must report it
 write_allowed() {
   m=$(model)
-  case "$J_MODEL" in G[0-9][0-9][0-9][0-9]) ;; *) return 1 ;; esac
+  case "$J_MODEL" in [A-Z][0-9][0-9][0-9][0-9]) ;; *) return 1 ;; esac
   [ -n "$m" ] && [ "$m" = "$J_MODEL" ]
 }
 
@@ -154,9 +154,9 @@ probe)
   kv stock "$(prop ro.vendor.build.version.incremental)"
   kv product "$(prop ro.vendor.xgimi.product.name)"
   # the stock config folder of this model code (one XGIMI build serves several codes; a firmware without the folder
-  # of this code is another model's): only a model code (a G and four digits) is looked up
+  # of this code is another model's): only a model code (a capital letter and four digits) is looked up
   case "$(model)" in
-    G[0-9][0-9][0-9][0-9]) ls "$XGIMICONFIG/$(model)" 2>/dev/null | grep -qx 'system\.ini' && kv model_config 1 || kv model_config 0 ;;
+    [A-Z][0-9][0-9][0-9][0-9]) ls "$XGIMICONFIG/$(model)" 2>/dev/null | grep -qx 'system\.ini' && kv model_config 1 || kv model_config 0 ;;
     *) kv model_config 0 ;;
   esac
   kv vbstate "$(prop ro.boot.verifiedbootstate)"

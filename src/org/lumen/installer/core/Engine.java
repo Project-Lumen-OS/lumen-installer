@@ -42,9 +42,14 @@ public final class Engine {
         void log(String line);
     }
 
-    /** the signed catalog of builds: its address, and the certificates of its key (the only ones in the app) */
-    public static final String CATALOG_URL = "https://github.com/Project-Lumen-OS/lumen-installer/releases/download/index/catalog.json";
-    public static final String CATALOG_NAME = "catalog.json";
+    /**
+     * the signed catalog of builds: its address, and the certificates of its key (the only ones in the app). 1.0.3 reads
+     * catalog.json and refuses that whole file for a model code that is not a G and four digits, so the codes of other
+     * letters are only in catalog-v2.json. Each file has its own serial: the kept copy, the LumenOS folder's copy and the
+     * download all use this one name, so a serial is only ever compared with one of the same file.
+     */
+    public static final String CATALOG_NAME = "catalog-v2.json";
+    public static final String CATALOG_URL = "https://github.com/Project-Lumen-OS/lumen-installer/releases/download/index/" + CATALOG_NAME;
 
     public static final class Config {
         public String catalogUrl = CATALOG_URL;
@@ -215,7 +220,7 @@ public final class Engine {
         }
     }
 
-    /** The catalog a LumenOS folder carries (catalog.json + .sig next to the release files), when one is there. */
+    /** The catalog a LumenOS folder carries (catalog-v2.json + .sig next to the release files), when one is there. */
     private File kitCatalogDir() {
         for (Host.Volume v : host.kitVolumes()) {
             for (File d : new File[] { new File(v.root, KIT_DIR), new File(v.appDir, KIT_DIR) }) {

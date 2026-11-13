@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * The signed catalog of Lumen OS builds (catalog.json + catalog.json.sig), the only place that knows models. It is made
+ * The signed catalog of Lumen OS builds (catalog-v2.json + .sig), the only place that knows models. It is made
  * from the published releases (tools/devices/installer_catalog.py): a model is in it only when a build for it is
  * published. The app reads the projector's model code, finds its entry and follows it: name, board, stock versions,
  * the certificates that sign its releases, and its builds (newest stable, newest beta). No entry: no build yet.
@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
  * Its serial only grows: the app never takes a catalog older than one it has already verified.
  *
  *   {"schema": 1, "kind": "lumen-installer-catalog", "serial": N, "releases": URL, "guide": URL, "models": [ENTRY]}
- *   ENTRY {"model": "G0000", "name": "...", "board": "mt0000", "product": "Product_x" | null, "config_check": bool,
+ *   ENTRY {"model": "A0000", "name": "...", "board": "mt0000", "product": "Product_x" | null, "config_check": bool,
  *          "stock": [{"version": "v1.2.3", "install": bool}], "refused": [{"version": "v1.2.3", "message": TEXT}],
  *          "certs": [PEM], "builds": [BUILD]}                       TEXT = {"en": "...", "ru": "...", ...}
  *   BUILD {"version": "1.0.10-beta1", "channel": "stable|beta", "edition": "nogms|gms", "way": "trial|computer",
@@ -130,7 +130,8 @@ public final class Catalog {
         return v != null ? v : t.get("en");
     }
 
-    private static final Pattern CODE = Pattern.compile("G[0-9]{4}");
+    /** an XGIMI model code: a capital letter and four digits (1.0.3 took a G only, see Engine.CATALOG_NAME) */
+    private static final Pattern CODE = Pattern.compile("[A-Z][0-9]{4}");
     private static final Pattern BOARD = Pattern.compile("[a-z0-9_]{1,32}");
     private static final Pattern STOCK = Pattern.compile("[vV][0-9]{1,4}(\\.[0-9]{1,4}){1,4}");
     private static final Pattern NAME = Pattern.compile("[^\\p{Cntrl}<>]{1,80}");
