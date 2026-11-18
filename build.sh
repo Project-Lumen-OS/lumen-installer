@@ -51,6 +51,7 @@ if [ -f "$HERE/app.layers" ]; then
 else
   mkdir -p "$ST"
   for f in AndroidManifest.xml res src assets; do cp -R "$HERE/$f" "$ST/"; done
+  [ ! -f "$HERE/R_EXTRA_PACKAGES" ] || cp "$HERE/R_EXTRA_PACKAGES" "$ST/"
 fi
 mkdir -p "$ST/assets/fonts"
 cp "$FD/Onest-Variable.ttf" "$FD/OFL-Onest.txt" "$ST/assets/fonts/"
