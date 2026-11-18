@@ -5,8 +5,12 @@
 -->
 <resources>
     <string name="app_name">Lumen Installer</string>
+    <!-- the language of this folder: the catalog notes are read in it, so the screen shows one language only -->
+    <string name="ui_lang">en</string>
     <string name="title">Try Lumen OS</string>
     <string name="working">Getting the Lumen OS trial run ready</string>
+    <!-- the card Firmware versions under the steps (its rows are the texts of apps/core/lumen-about) -->
+    <string name="versions_title">Firmware versions</string>
     <string name="device_line">%1$s (%2$s), XGIMI firmware %3$s</string>
     <string name="device_line_short">%1$s, XGIMI firmware %2$s</string>
     <string name="trial_info">Lumen OS starts once as a trial run. Your XGIMI system and your files stay as they are. The next restart after the trial goes back to the XGIMI system. To keep Lumen OS, choose Install inside the trial. During the trial some sound and video may not work yet. While it works, the installer uses the XGIMI service access of the projector. Keep the projector plugged in.</string>
@@ -27,7 +31,6 @@
     <string name="confirm_replace_body">The old trial is removed and the new Lumen OS from the chosen source is prepared and started. Your XGIMI system stays as it is.</string>
     <string name="btn_again">Start the trial again</string>
     <string name="btn_remove">Remove the trial</string>
-    <string name="btn_close">Close</string>
     <string name="btn_cancel">Cancel</string>
     <string name="btn_back">Back</string>
     <string name="btn_retry">Try again</string>
@@ -123,6 +126,7 @@
     <string name="about_lic_installer">Lumen Installer and Lumen OS: Apache License 2.0.</string>
     <string name="about_lic_aosp">Android (AOSP) and LineageOS: Apache License 2.0 and other open source licenses.</string>
     <string name="about_lic_font">Onest font: SIL Open Font License 1.1.</string>
+    <string name="about_lic_icons">Material Symbols icons by Google: Apache License 2.0.</string>
     <string name="about_project_title">Project page</string>
     <string name="about_project_1">github.com/Project-Lumen-OS/lumen-os</string>
     <string name="about_project_2">News and help: t.me/projector_lumenos</string>
@@ -147,4 +151,32 @@
     <string name="opt_version_stable_hint">The tested Lumen OS release for this projector.</string>
     <string name="opt_version_beta_hint">A beta is a test version. It may have bugs. It passes the same safety check.</string>
     <string name="opt_version_beta_only">Only a beta version is available</string>
+
+    <!-- an installed Lumen OS whose update app the signed list fixes (1.0.6) -->
+    <string name="msg_app_update_offered">This projector runs Lumen OS %1$s. Its Lumen OS update app needs a fix before it can install new versions. Press Update Lumen OS. Your apps, settings and files stay as they are.</string>
+    <string name="msg_app_update_confirm">Confirm the update on the screen that opens. If the projector asks whether Lumen Installer may install apps, allow it and go back.</string>
+    <string name="msg_app_updated">The Lumen OS update app is fixed. Press Open Lumen OS update, then Download and install. The new Lumen OS comes over the internet and your data stays.</string>
+    <string name="msg_app_update_bad">The downloaded file does not fit this projector (%1$s). It was deleted. Nothing was changed.</string>
+    <string name="msg_app_update_failed">The Lumen OS update app was not fixed (%1$s). Nothing else was changed. Press Update Lumen OS to try again.</string>
+    <string name="btn_app_update">Update Lumen OS</string>
+    <string name="btn_open_updater">Open Lumen OS update</string>
+    <string name="btn_busy_app_update">Updating…</string>
+    <!-- a stock version the catalog does not list for a known model: the user may start the trial anyway -->
+    <string name="force_trial">Start the trial anyway</string>
+    <string name="force_warning">We have not checked this XGIMI firmware version. The trial may run without sound or with a dark screen. Restarting the projector brings back the usual system. Lumen OS cannot be installed for good from this version.</string>
+    <string name="msg_forced">Version %1$s is not checked. You may start the trial of %2$s at your own risk.</string>
+    <!-- the stock system info the user may send us -->
+    <string name="btn_dump">Send info</string>
+    <string name="btn_busy_dump">Sending…</string>
+    <string name="btn_send">Send</string>
+    <string name="dump_title">Send projector info</string>
+    <string name="dump_body">We will collect information about the projector system and send it to us: model, firmware version, the XGIMI settings app, the app list, how the memory is divided, the system logs and settings. It is about 100 MB. It helps us make Lumen OS for your model and firmware. Passwords, Wi-Fi networks, accounts, keys and the serial number are not sent. Nothing on the projector changes. If the sending stops, press the button again and it goes on from where it stopped. Send it?</string>
+    <string name="msg_dump_collecting">Collecting the projector info</string>
+    <string name="msg_dump_no_root">No system access. Only the basic info goes out.</string>
+    <string name="msg_dump_no_space">Not enough free memory on the projector: %1$s MB free, %2$s MB needed. Delete some apps or files and try again.</string>
+    <string name="msg_dump_resuming">Going on with the info collected before, %1$s MB</string>
+    <string name="msg_dump_sending">Sending: %1$s of %2$s MB</string>
+    <string name="msg_dump_sent">Sent. Your code is %1$s. Tell it to us if you write to us.</string>
+    <string name="msg_dump_failed">Not sent (%1$s). Nothing changed. Try again later.</string>
+    <string name="msg_dump_paused">Not sent yet (%1$s). Press Send info again and it goes on from where it stopped.</string>
 </resources>

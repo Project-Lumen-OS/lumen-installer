@@ -17,7 +17,8 @@ import java.util.regex.Pattern;
  * Signed (RSA PKCS#1 v1.5 SHA-256) with the list key, whose certificate is the only one in the app (assets/index/).
  * Its serial only grows: the app never takes a catalog older than one it has already verified.
  *
- *   {"schema": 1, "kind": "lumen-installer-catalog", "serial": N, "releases": URL, "guide": URL, "models": [ENTRY]}
+ *   {"schema": 1, "kind": "lumen-installer-catalog", "serial": N, "releases": URL, "guide": URL, "models": [ENTRY],
+ *    "reports": [URL] (optional: the report addresses of the stock system info, a direct one before Cloudflare)}
  *   ENTRY {"model": "A0000", "name": "...", "board": "mt0000", "product": "Product_x" | null, "config_check": bool,
  *          "stock": [{"version": "v1.2.3", "install": bool}], "refused": [{"version": "v1.2.3", "message": TEXT}],
  *          "certs": [PEM], "builds": [BUILD]}                       TEXT = {"en": "...", "ru": "...", ...}
@@ -25,6 +26,10 @@ import java.util.regex.Pattern;
  *          "image": URL, "size": N, "sha256": HEX, "sums": URL of SHA256SUMS (+ .sig), "stock": ["v1.2.3"],
  *          "install": bool, "clears_leftovers": bool}               install = installs for good from the trial,
  *          clears_leftovers = its in-trial install clears what a finished XGIMI update left in the projector's memory
+ *   ENTRY may carry "app_updates": [APP] (1.0.6): an app of an installed Lumen OS that this app updates, for the Lumen OS
+ *   versions it lists (their own update app refuses every install, so a newer Lumen OS cannot come over the internet)
+ *   APP   {"package": "a.b", "version_code": N, "apk": URL, "size": N, "sha256": HEX, "signer": HEX of the signing
+ *          certificate, "lumen": ["1.0.10-beta5"]}
  * Unknown keys are ignored; anything odd in a known key refuses the whole catalog.
  */
 public final class Catalog {
@@ -64,6 +69,19 @@ public final class Catalog {
         Stock(String version, boolean install) { this.version = version; this.install = install; }
     }
 
+    /** An app of an installed Lumen OS that this app updates on the Lumen OS versions it lists (the system installer
+     *  takes it only over the installed app of the same signature). */
+    public static final class AppUpdate {
+        public final String pkg, apk, sha256, signer;
+        public final long versionCode, size;
+        public final List<String> lumen;
+
+        AppUpdate(String pkg, long versionCode, String apk, long size, String sha256, String signer, List<String> lumen) {
+            this.pkg = pkg; this.versionCode = versionCode; this.apk = apk; this.size = size; this.sha256 = sha256;
+            this.signer = signer; this.lumen = lumen;
+        }
+    }
+
     public static final class Entry {
         public final String code, name, board;
         /** the stock ro.vendor.xgimi.product.name of this model (another one = a cross-flash), null = not checked */
@@ -75,11 +93,18 @@ public final class Catalog {
         public final Map<String, Map<String, String>> refused;
         public final List<X509Certificate> certs;
         public final List<Build> builds;
+        public final List<AppUpdate> apps;
 
         Entry(String code, String name, String board, String product, boolean configCheck, List<Stock> stock,
-              Map<String, Map<String, String>> refused, List<X509Certificate> certs, List<Build> builds) {
+              Map<String, Map<String, String>> refused, List<X509Certificate> certs, List<Build> builds, List<AppUpdate> apps) {
             this.code = code; this.name = name; this.board = board; this.product = product; this.configCheck = configCheck;
-            this.stock = stock; this.refused = refused; this.certs = certs; this.builds = builds;
+            this.stock = stock; this.refused = refused; this.certs = certs; this.builds = builds; this.apps = apps;
+        }
+
+        /** the app update for this running Lumen OS version, null = none */
+        public AppUpdate appUpdate(String lumen) {
+            for (AppUpdate a : apps) if (a.lumen.contains(lumen)) return a;
+            return null;
         }
 
         /** the trial build of this channel, null = none */
@@ -112,9 +137,12 @@ public final class Catalog {
     public final long serial;
     public final String releases, guide;
     public final List<Entry> models;
+    /** our report server's addresses for the stock system info, tried in order (a direct one before Cloudflare), the
+     *  place of ro.lumen.report.url on the XGIMI system; empty: the app's default */
+    public final List<String> reports;
 
-    private Catalog(long serial, String releases, String guide, List<Entry> models) {
-        this.serial = serial; this.releases = releases; this.guide = guide; this.models = models;
+    private Catalog(long serial, String releases, String guide, List<Entry> models, List<String> reports) {
+        this.serial = serial; this.releases = releases; this.guide = guide; this.models = models; this.reports = reports;
     }
 
     /** The entry of this model code, or null (no build for it yet). */
@@ -138,7 +166,8 @@ public final class Catalog {
     private static final Pattern WORD = Pattern.compile("[A-Za-z0-9._-]{1,64}");
     private static final Pattern SHA = Pattern.compile("[0-9a-f]{64}");
     private static final Pattern LANG = Pattern.compile("[a-z]{2}(-r[A-Z]{2})?");
-    static final long MAX_IMAGE = 4L << 30;
+    private static final Pattern PKG = Pattern.compile("[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){1,7}");
+    static final long MAX_IMAGE = 4L << 30, MAX_APK = 64L << 20;
 
     /** Verify the signature with the app's list certificates, then read the catalog strictly. */
     public static Catalog parse(byte[] json, byte[] sig, List<X509Certificate> listCerts) throws Bad {
@@ -161,7 +190,19 @@ public final class Catalog {
                 for (Entry x : out) if (x.code.equals(en.code)) throw new IllegalArgumentException("model " + en.code + " twice");
                 out.add(en);
             }
-            return new Catalog(serial, releases, guide, Collections.unmodifiableList(out));
+            List<String> reports = new ArrayList<>();
+            if (o.containsKey("reports")) {
+                List<Object> rl = Json.arr(o.get("reports"), "reports");
+                if (rl.size() > 4) throw new IllegalArgumentException("reports");
+                for (int i = 0; i < rl.size(); i++) {
+                    Map<String, Object> one = new java.util.HashMap<>();
+                    one.put("report", rl.get(i));
+                    String u = https(one, "report", allowLocalHttp);
+                    if (!u.endsWith("/lumen/v1/report") || reports.contains(u)) throw new IllegalArgumentException("report " + u);
+                    reports.add(u);
+                }
+            }
+            return new Catalog(serial, releases, guide, Collections.unmodifiableList(out), Collections.unmodifiableList(reports));
         } catch (IllegalArgumentException e) {
             throw new Bad(Msg.CATALOG_BAD, e.getMessage());
         }
@@ -270,7 +311,29 @@ public final class Catalog {
             builds.add(bu);
         }
         if (builds.isEmpty()) throw new IllegalArgumentException(code + " no build");
+        List<AppUpdate> apps = new ArrayList<>();
+        if (m.get("app_updates") != null) {
+            for (Object a : Json.arr(m.get("app_updates"), code + " app_updates")) apps.add(app(Json.obj(a, code + " app update"), code, local));
+        }
         return new Entry(code, name, board, product, configCheck, Collections.unmodifiableList(stock),
-                Collections.unmodifiableMap(refused), certs, Collections.unmodifiableList(builds));
+                Collections.unmodifiableMap(refused), certs, Collections.unmodifiableList(builds), Collections.unmodifiableList(apps));
+    }
+
+    private static AppUpdate app(Map<String, Object> m, String code, boolean local) {
+        String pkg = match(m, "package", PKG);
+        long vc = Long.parseLong(Json.num(m, "version_code"));
+        if (vc <= 0) throw new IllegalArgumentException(code + " " + pkg + " version_code " + vc);
+        String apk = https(m, "apk", local);
+        if (!apk.substring(apk.lastIndexOf('/') + 1).matches("[A-Za-z0-9._-]{1,120}\\.apk")) throw new IllegalArgumentException(code + " " + pkg + " file");
+        long size = Long.parseLong(Json.num(m, "size"));
+        if (size <= 0 || size > MAX_APK) throw new IllegalArgumentException(code + " " + pkg + " size " + size);
+        String sha = match(m, "sha256", SHA), signer = match(m, "signer", SHA);
+        List<String> lumen = new ArrayList<>();
+        for (Object v : Json.arr(m.get("lumen"), code + " " + pkg + " lumen")) {
+            if (!(v instanceof String) || !Release.versionOk((String) v) || lumen.contains(v)) throw new IllegalArgumentException(code + " " + pkg + " lumen " + v);
+            lumen.add((String) v);
+        }
+        if (lumen.isEmpty()) throw new IllegalArgumentException(code + " " + pkg + " no Lumen OS versions");
+        return new AppUpdate(pkg, vc, apk, size, sha, signer, Collections.unmodifiableList(lumen));
     }
 }

@@ -17,7 +17,12 @@ public enum Task {
     /** remove the trial */
     REMOVE(false, false),
     /** restart the projector */
-    RESTART(false, false);
+    RESTART(false, false),
+    /** an installed Lumen OS: download, check and install the catalog's update of one of its apps (1.0.6) */
+    APP_UPDATE(false, false),
+    /** the stock system info: the stock settings app and read-only root commands, a zip without personal data, sent
+     *  to our server in parts (StockDump, Engine.dump); a break leaves it to go on with the next press */
+    DUMP(false, false);
 
     /** Pause is offered while it runs (it downloads) */
     public final boolean pausable;

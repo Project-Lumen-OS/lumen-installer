@@ -9,11 +9,13 @@
   minSdk 29, targetSdk 29: with requestLegacyExternalStorage the storage permission lets it read a LumenOS folder at
   the root of a USB stick (the release files, verified like a download); the app's own folder on the stick (a download
   kept there) needs no permission.
+  1.0.6: on an installed Lumen OS it may update one of its apps that the signed list names for that Lumen OS version
+  (REQUEST_INSTALL_PACKAGES: the system installer asks the user, the app never installs anything by itself).
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.lumen.installer"
-    android:versionCode="105"
-    android:versionName="1.0.5">
+    android:versionCode="106"
+    android:versionName="1.0.6">
 
     <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="29" />
 
@@ -24,6 +26,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:label="@string/app_name"

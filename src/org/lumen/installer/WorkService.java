@@ -35,6 +35,8 @@ import java.util.List;
  *   again    gsi_tool enable --single-boot for an installed trial
  *   remove   gsi_tool wipe
  *   restart  reboot (only from the Restart button), returns only when the projector did not go down
+ *   app_update  an installed Lumen OS: the catalog's update of one of its apps, the system installer asks the user
+ *   dump     the stock system info the user agreed to send (Engine.dump), read only
  *   stop     pause the running task (the download keeps what it has)
  */
 public class WorkService extends Service {
@@ -49,7 +51,14 @@ public class WorkService extends Service {
             final Context app = c.getApplicationContext();
             Engine.Config cfg = new Engine.Config();
             cfg.catalogCerts = catalogCerts(app);
-            cfg.lang = lang(java.util.Locale.getDefault());
+            // the language the app's own texts resolved to (a language the app is not fully translated into reads
+            // English), so a catalog note never mixes into a screen of another language
+            cfg.lang = app.getString(R.string.ui_lang);
+            try {
+                cfg.appVersion = app.getPackageManager().getPackageInfo(app.getPackageName(), 0).versionName;
+            } catch (android.content.pm.PackageManager.NameNotFoundException | RuntimeException ignored) {
+                // the summary says nothing then
+            }
             engine = new Engine(new AndroidHost(app), cfg, new Engine.Listener() {
                 @Override public void step(InstallStep s, StepStatus st) { Snap.I.step(s, st); }
                 @Override public void message(Msg m, String... args) { Snap.I.message(m, args); }
@@ -58,13 +67,6 @@ public class WorkService extends Service {
             });
         }
         return engine;
-    }
-
-    /** the language key of the catalog's texts: "zh-rCN" / "zh-rTW" for Chinese, else the language ("pt", "ru") */
-    static String lang(java.util.Locale l) {
-        String lg = l.getLanguage();
-        if ("zh".equals(lg)) return "TW".equals(l.getCountry()) || "Hant".equals(l.getScript()) ? "zh-rTW" : "zh-rCN";
-        return lg;
     }
 
     /** The certificates of the signed catalog (assets/index/*.x509.pem): the only certificates in the app.
@@ -142,6 +144,13 @@ public class WorkService extends Service {
                 if (e.removeTrial()) { Snap.I.resetSteps(); Snap.I.armed = false; }
             } else if (t == Task.RESTART) {
                 e.reboot();
+            } else if (t == Task.DUMP) {
+                Snap.I.resetSteps();
+                e.dump();
+            } else if (t == Task.APP_UPDATE) {
+                Snap.I.resetSteps();
+                Snap.I.appUpdated = e.updateApp();
+                Snap.I.appPkg = e.updatedPkg;
             }
             Snap.I.trial = e.trial;
             Snap.I.canStart = e.canStart();

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0
+     The colour of a chosen mark (a checked radio button, a ticked box, a switch that is on): the accent, as the stock
+     Android TV lists draw it, and white on the focused row, whose fill is the accent. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false" android:color="#FF5D6570" />
+    <item android:state_focused="true" android:color="#FFFFFFFF" />
+    <item android:state_pressed="true" android:color="#FFFFFFFF" />
+    <item android:color="#FF3B78E7" />
+</selector>

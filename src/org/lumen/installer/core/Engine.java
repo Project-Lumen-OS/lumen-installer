@@ -1,11 +1,15 @@
 package org.lumen.installer.core;
 
+import org.lumen.about.XgimiFacts;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -26,6 +30,17 @@ import java.util.Properties;
  *   prepare  the AVB hashtree footer as a separate tail file (AvbTail), checked again after writing
  *   start    ONLY after the user confirmed: root `cat image tail | gsi_tool install ... --no-reboot`, then
  *            `gsi_tool enable --single-boot`; the user restarts. One-shot: the restart after that is stock again.
+ *   app      on an installed Lumen OS only (1.0.6), when the catalog updates one of its apps for this Lumen OS version
+ *            (its own update app refuses every install): the app's file, checked, then the system installer asks the
+ *            user. No root. After it Lumen OS updates itself over the internet again.
+ *   force    a known model on a stock version the catalog does not list: the user may tick "start the trial anyway"
+ *            (never remembered), then the newest trial build of the model runs the same steps. The install from the
+ *            trial stays closed (the in-trial installer refuses that version itself), the catalog's own refusals, the
+ *            board, orange and the root probe's model checks stay. An unknown model code never gets the choice.
+ *   dump     the stock system info (StockDump, about 100 MB): the stock settings app, the read-only root commands of
+ *            the script's dump table and what the app reads itself, personal data removed, sent in parts to our report
+ *            server (PartUpload), going on after a break where it stopped. No writes outside the app's own dirs. The
+ *            full firmware copy to a USB stick is LumenDump's, not this app's.
  * Nothing is written outside the app's own dirs before start, and start writes only /data/gsi and /metadata/gsi
  * (the trial's own files; they must be on /data, never on a stick). Models that are not supported never reach the
  * release, the stick or the root side.
@@ -65,6 +80,17 @@ public final class Engine {
         public long probeTimeoutMs = 3 * 60 * 1000L;
         /** how long the restart request may take, and then the projector's going down: still running = no restart */
         public long rebootWaitMs = 60 * 1000L;
+        /** how long the system installer may take for an app update, the user's confirmation included */
+        public long appInstallTimeoutMs = 15 * 60 * 1000L;
+        /** the stock system info: our report server's addresses (tried in order) when the signed catalog names none,
+         *  how long the root part may run, the free space it needs on /data (the root texts and the zip), how long a
+         *  zip that did not go out is kept to go on with (the server keeps an unfinished upload a day) */
+        public List<String> dumpUrls = Arrays.asList(org.lumen.report.ReportUrl.CLOUDFLARE);
+        public long dumpTimeoutMs = 20 * 60 * 1000L;
+        public long dumpSpaceBytes = 600L << 20;
+        public long dumpKeepMs = 20 * 3600 * 1000L;
+        /** this app's version, written into the system info */
+        public String appVersion = "";
         public KeyPair avbKey;                     // tests only; the app makes a new key per run
         public byte[] avbSalt;                     // tests only
     }
@@ -87,9 +113,17 @@ public final class Engine {
         public String code = "", board = "", stock = "", name = "";
         /** the serial of the catalog the verdict came from, 0 = no catalog */
         public long catalogSerial;
+        /** an installed Lumen OS (verdict APP_UPDATE_OFFERED): the catalog's update of one of its apps, null = none */
+        public Catalog.AppUpdate appUpdate;
         public Msg verdict;
         public String[] args = new String[0];
-        public boolean ok() { return verdict == Msg.SUPPORTED; }
+        /** the stock version is not in the catalog for this known model: "start the trial anyway" is offered */
+        public boolean forceOffered;
+        /** ... and ticked: the verdict is FORCED, the build the newest trial build of the model */
+        public boolean forced;
+        /** the projector's firmware versions: the rows of lumen-about, the same as on the About page of Lumen OS */
+        public XgimiFacts facts;
+        public boolean ok() { return verdict == Msg.SUPPORTED || verdict == Msg.FORCED; }
     }
 
     private final Host host;
@@ -150,6 +184,13 @@ public final class Engine {
     public ReleaseChannel channel() { return "beta".equals(state("channel")) ? ReleaseChannel.BETA : ReleaseChannel.STABLE; }
 
     public void setChannel(ReleaseChannel c) { set("channel", c == ReleaseChannel.BETA ? "beta" : "stable"); saveState(); }
+
+    private volatile boolean force;
+
+    /** "start the trial anyway": only for this run of the app, never saved */
+    public void setForce(boolean on) { force = on; }
+
+    public boolean force() { return force; }
 
     /** is the image our own download, which we may delete? Never a stick folder file. */
     boolean imageIsDownload() { return !"stick".equals(state("image.from")); }
@@ -308,6 +349,7 @@ public final class Engine {
         if (d.code.isEmpty()) d.code = Props.get(p, "ro.xgimi.modelname");
         d.board = Props.get(p, "ro.boot.hardware");
         d.stock = Props.get(p, "ro.vendor.build.version.incremental");
+        d.facts = XgimiFacts.read(k -> Props.get(p, k), host::file, host.kernel());
         Catalog cat = currentCatalog();
         d.catalogSerial = cat == null ? 0 : cat.serial;
         d.model = cat == null ? null : cat.find(d.code);
@@ -327,7 +369,8 @@ public final class Engine {
         if ("1".equals(Props.get(p, "ro.gsid.image_running"))) {
             d.verdict = Msg.IN_TRIAL;
         } else if (!lumen.isEmpty()) {
-            d.verdict = Msg.ALREADY_LUMEN; d.args = new String[] { lumen };
+            d.appUpdate = appUpdate(d.model, lumen);
+            d.verdict = d.appUpdate != null ? Msg.APP_UPDATE_OFFERED : Msg.ALREADY_LUMEN; d.args = new String[] { lumen };
         } else if (cat == null) {
             d.verdict = Msg.CATALOG_MISSING;
         } else if (d.model == null) {
@@ -338,20 +381,48 @@ public final class Engine {
             d.verdict = Msg.BOARD_MISMATCH; d.args = new String[] { code, d.board.isEmpty() ? "?" : d.board };
         } else if (d.model.refused.containsKey(d.stock)) {
             d.verdict = Msg.CATALOG_NOTE; d.args = new String[] { Catalog.text(d.model.refused.get(d.stock), cfg.lang) };
-        } else if (d.stockRow == null) {
-            // the catalog's stock versions of this model code (another one may be a firmware of another model)
-            d.verdict = Msg.MODEL_STOCK_UNSUPPORTED;
-            d.args = new String[] { code, d.stock.isEmpty() ? "?" : d.stock, join(d.model.stockVersions()) };
-        } else if (net && d.build == null) {
-            d.verdict = Msg.STOCK_UNSUPPORTED; d.args = new String[] { d.stock, join(buildStock(d.model)) };
+        } else if ((d.stockRow == null || (net && d.build == null)) && !forceTaken(d, net)) {
+            if (d.stockRow == null) {
+                // the catalog's stock versions of this model code (another one may be a firmware of another model)
+                d.verdict = Msg.MODEL_STOCK_UNSUPPORTED;
+                d.args = new String[] { code, d.stock.isEmpty() ? "?" : d.stock, join(d.model.stockVersions()) };
+            } else {
+                d.verdict = Msg.STOCK_UNSUPPORTED; d.args = new String[] { d.stock, join(buildStock(d.model)) };
+            }
         } else if (!"orange".equals(Props.get(p, "ro.boot.verifiedbootstate"))) {
             String v = Props.get(p, "ro.boot.verifiedbootstate");
             d.verdict = Msg.NOT_ORANGE; d.args = new String[] { v.isEmpty() ? "?" : v };
+        } else if (d.forced) {
+            d.verdict = Msg.FORCED;
+            d.args = new String[] { d.stock.isEmpty() ? "?" : d.stock, d.build != null ? d.build.version : "?" };
         } else {
             d.verdict = Msg.SUPPORTED;
         }
         det = d;
         return d;
+    }
+
+    /** A stock version the catalog does not list for this known model (it has a trial build): the choice is offered,
+     *  and when the user ticked it the build becomes the newest trial build (download) or the stick folder's. */
+    private boolean forceTaken(Detection d, boolean net) {
+        Catalog.Build b = forceBuild(d.model);
+        if (b == null) return false;
+        d.forceOffered = true;
+        if (!force) return false;
+        d.forced = true;
+        d.betaOffered = d.betaOnly = false;
+        d.stableVersion = d.betaVersion = "";
+        d.build = net ? b : null;
+        return true;
+    }
+
+    /** the trial build a forced trial starts: the newest beta (a trial starts from the newest beta), else the stable */
+    static Catalog.Build forceBuild(Catalog.Entry m) {
+        for (ReleaseChannel c : new ReleaseChannel[] { ReleaseChannel.BETA, ReleaseChannel.STABLE }) {
+            Catalog.Build b = m == null ? null : m.build(c);
+            if (b != null && b.trial) return b;
+        }
+        return null;
     }
 
     /** The build a download reads: the stable one, or the beta one when the user chose Beta and there is one. With a
@@ -365,6 +436,15 @@ public final class Engine {
     static Catalog.Build fits(Catalog.Entry m, ReleaseChannel c, String stock) {
         Catalog.Build b = m == null ? null : m.build(c);
         return b != null && b.stock.contains(stock) ? b : null;
+    }
+
+    /** The catalog's update of an app of this running Lumen OS version, when that app is installed with an older
+     *  version code; null = none (no row for this version, the app is not there, or it is that version already). */
+    Catalog.AppUpdate appUpdate(Catalog.Entry m, String lumen) {
+        Catalog.AppUpdate u = m == null ? null : m.appUpdate(lumen);
+        if (u == null) return null;
+        Host.App have = host.app(u.pkg);
+        return have != null && have.versionCode < u.versionCode ? u : null;
     }
 
     /** every stock version some trial build of the model takes */
@@ -588,7 +668,7 @@ public final class Engine {
             return null;
         }
         if (k.build == null) { fail(InstallStep.CHECK, Msg.STICK_NOT_LISTED); return null; }
-        if (!k.build.stock.contains(d.stock)) {
+        if (!k.build.stock.contains(d.stock) && !d.forced) {
             fail(InstallStep.CHECK, Msg.STOCK_UNSUPPORTED, d.stock.isEmpty() ? "?" : d.stock, join(k.build.stock));
             return null;
         }
@@ -629,27 +709,40 @@ public final class Engine {
         if (host.freeBytes(dir) - rest - tailEstimate(imageSize) < 0) {
             return fail(InstallStep.DOWNLOAD, Msg.NO_SPACE, gb(imageSize + tailEstimate(imageSize)), gb(host.freeBytes(dir)));
         }
+        String last;
+        try {
+            last = fetch(InstallStep.DOWNLOAD, imageUrl, f, imageSize, "image.etag");
+        } catch (Bytes.Stopped e) {
+            return stopped(InstallStep.DOWNLOAD);
+        }
+        if (last != null) return fail(InstallStep.DOWNLOAD, Msg.DOWNLOAD_INTERRUPTED, last);
+        l.message(Msg.DOWNLOADED, mb(imageSize));
+        l.step(InstallStep.DOWNLOAD, StepStatus.DONE);
+        return true;
+    }
+
+    /** Download url into f (size bytes), resumable (Range + If-Range with the ETag kept under etagKey), with the
+     *  config's retries. null = done, else the last error. Bytes.Stopped = paused (what came is kept). */
+    private String fetch(InstallStep s, String url, File f, long size, String etagKey) throws Bytes.Stopped {
         String last = "";
         for (int attempt = 0; attempt <= cfg.retries; attempt++) {
-            if (stop) return stopped(InstallStep.DOWNLOAD);
+            if (stop) throw new Bytes.Stopped();
             try {
                 http.lastEtag = "";
-                String tag = http.download(imageUrl, f, imageSize, state("image.etag"), new Http.Progress() {
-                    @Override public void at(long done, long total) { l.progress(InstallStep.DOWNLOAD, done, total); }
+                String tag = http.download(url, f, size, state(etagKey), new Http.Progress() {
+                    @Override public void at(long done, long total) { l.progress(s, done, total); }
                 }, stopper);
-                set("image.etag", tag);
+                set(etagKey, tag);
                 saveState();
-                if (f.length() != imageSize) throw new IOException("size " + f.length());
-                l.message(Msg.DOWNLOADED, mb(imageSize));
-                l.step(InstallStep.DOWNLOAD, StepStatus.DONE);
-                return true;
+                if (f.length() != size) throw new IOException("size " + f.length());
+                return null;
             } catch (Bytes.Stopped e) {
-                if (!http.lastEtag.isEmpty()) { set("image.etag", http.lastEtag); saveState(); }
-                return stopped(InstallStep.DOWNLOAD);
+                if (!http.lastEtag.isEmpty()) { set(etagKey, http.lastEtag); saveState(); }
+                throw e;
             } catch (IOException e) {
-                if (!http.lastEtag.isEmpty()) { set("image.etag", http.lastEtag); saveState(); }
+                if (!http.lastEtag.isEmpty()) { set(etagKey, http.lastEtag); saveState(); }
                 last = e.getMessage() == null ? e.toString() : e.getMessage();
-                l.log("download: " + last + " (" + (f.exists() ? f.length() : 0) + " of " + imageSize + " bytes kept)");
+                l.log("download: " + last + " (" + (f.exists() ? f.length() : 0) + " of " + size + " bytes kept)");
                 if (e instanceof Http.HttpException) {
                     int c = ((Http.HttpException) e).code;
                     if (c >= 400 && c < 500 && c != 408 && c != 429) break;
@@ -657,7 +750,7 @@ public final class Engine {
                 sleep(cfg.retryDelayMs * (1L << Math.min(attempt, 4)));
             }
         }
-        return fail(InstallStep.DOWNLOAD, Msg.DOWNLOAD_INTERRUPTED, last);
+        return last;
     }
 
     private boolean stopped(InstallStep s) {
@@ -772,10 +865,219 @@ public final class Engine {
     }
 
     /** the catalog has a trial build for this model and lists this stock version */
-    public boolean canStart() { return det != null && det.ok() && det.stockRow != null; }
+    public boolean canStart() { return det != null && det.ok() && (det.stockRow != null || det.forced); }
 
     /** the trial may start, installing for good from it is not open for this build and stock version */
     public boolean trialOnly() { return canStart() && handover() != 1; }
+
+    // ------------------------------------------------------------------------------------------------- dump
+    /** the stock system info may be made here: on the XGIMI system, not in a trial or on Lumen OS */
+    public static boolean dumpAllowed(Detection d) {
+        return d != null && d.verdict != Msg.IN_TRIAL && d.verdict != Msg.ALREADY_LUMEN && d.verdict != Msg.APP_UPDATE_OFFERED;
+    }
+
+    /** The random id of this app's reports (not the serial), made once. */
+    String reportInstallId() {
+        String id = state("dump.install");
+        if (!id.matches("[0-9a-f]{24}")) {
+            id = Root.newNonce() + Root.newNonce().substring(0, 8);
+            set("dump.install", id);
+            saveState();
+        }
+        return id;
+    }
+
+    /** where the stock system info goes, in order: persist.lumen.report.url on this unit (tests), else the signed
+     *  catalog's "reports" (a direct address before Cloudflare, the place of ro.lumen.report.url on the XGIMI system),
+     *  else the app's default */
+    public List<String> dumpUrls(Map<String, String> p) {
+        Catalog cat = currentCatalog();
+        String image = cat == null ? "" : String.join(" ", cat.reports), debug = Props.get(p, "persist.lumen.report.url");
+        return debug.isEmpty() && image.isEmpty() ? cfg.dumpUrls : org.lumen.report.ReportUrl.choose(debug, image);
+    }
+
+    /** the stock settings app of this firmware: a known name, else the system app that opens the Settings screen */
+    String settingsPackage() {
+        for (String k : StockDump.SETTINGS_APPS) if (host.app(k) != null) return k;
+        String s = host.settingsActivityPackage();
+        return s == null || !s.matches("[a-z][a-z0-9_]*(\\.[a-z0-9_]+){1,7}") || s.startsWith("org.lumen.") ? "" : s;
+    }
+
+    File dumpZip() { return new File(new File(dir, "dump"), "lumen-dump.zip"); }
+
+    /** a zip made before that did not go out yet and may go on: the same file (size and sha256), not too old */
+    boolean dumpPending(File zip) {
+        String up = state("dump.upload");
+        if (!up.matches("[0-9a-f]{32}") || !zip.isFile() || zip.length() != parseLong(state("dump.size"))) return false;
+        if (System.currentTimeMillis() - parseLong(state("dump.made")) > cfg.dumpKeepMs) return false;
+        try {
+            return org.lumen.report.PartUpload.sha256(zip).equals(state("dump.sha"));
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    void dumpForget(File zip) {
+        for (String k : new String[] { "dump.upload", "dump.size", "dump.made", "dump.sha", "dump.serial", "dump.choked" }) set(k, "");
+        saveState();
+        zip.delete();
+    }
+
+    /**
+     * The stock system info (about 100 MB): the stock settings app's APK files, what the app reads itself
+     * (Host.facts), the read-only root commands of the script's dump table (when the root route answers), personal
+     * data removed (StockDump), sent in parts to our report server (PartUpload). A zip that did not go out stays in the
+     * app's dir with its upload id, and the next press goes on where the upload stopped (also after a restart of the
+     * app or the projector). Writes nothing outside the app's own dirs. The report code is kept as state dump.code.
+     */
+    public boolean dump() {
+        Map<String, String> p = host.props();
+        String code = Props.get(p, "ro.boot.xgimi.modelname");
+        if (code.isEmpty()) code = Props.get(p, "ro.xgimi.modelname");
+        String stock = Props.get(p, "ro.vendor.build.version.incremental");
+        File zip = dumpZip();
+        if (dumpPending(zip)) {
+            l.message(Msg.DUMP_RESUMING, mb(zip.length()));
+        } else {
+            dumpForget(zip);
+            long free = host.freeBytes(dir);
+            if (free < cfg.dumpSpaceBytes) {
+                l.message(Msg.DUMP_NO_SPACE, mb(free), mb(cfg.dumpSpaceBytes));
+                return false;
+            }
+            if (!dumpCollect(zip, p, code, stock)) return false;
+        }
+        long total = zip.length();
+        l.message(Msg.DUMP_SENDING, "0", mb(total));
+        org.lumen.report.PartUpload u = new org.lumen.report.PartUpload(reportInstallId(), stock, code.toLowerCase(Locale.ROOT),
+                "dump", state("dump.serial"), cfg.allowLocalHttp);
+        boolean choked = "1".equals(state("dump.choked"));
+        long[] shown = { -1 };
+        try {
+            String got = u.send(dumpUrls(p), zip, state("dump.upload"), choked, (sent, t) -> {
+                if (sent >> 20 != shown[0]) {
+                    shown[0] = sent >> 20;
+                    l.message(Msg.DUMP_SENDING, String.valueOf(sent >> 20), mb(t));
+                    l.progress(null, sent, t);
+                }
+                return !stop;
+            });
+            set("dump.code", got);
+            dumpForget(zip);
+            l.log("dump sent: " + got + " (" + total + " B)");
+            l.message(Msg.DUMP_SENT, got);
+            return true;
+        } catch (org.lumen.report.PartUpload.Failed e) {
+            String why = e.getMessage() == null ? e.toString() : e.getMessage();
+            l.log("dump not sent: " + why + (e.retry ? " (kept to go on)" : ""));
+            if (e.retry) {
+                set("dump.choked", u.choked() ? "1" : "");
+                saveState();
+                l.message(Msg.DUMP_PAUSED, why);
+            } else {
+                dumpForget(zip);
+                l.message(Msg.DUMP_FAILED, why);
+            }
+            return false;
+        } catch (IOException e) {
+            // stopped (Pause, the app closed) or the zip could not be read: kept, the next press goes on
+            String why = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            set("dump.choked", u.choked() ? "1" : "");
+            saveState();
+            l.log("dump stopped: " + why);
+            l.message(Msg.DUMP_PAUSED, why);
+            return false;
+        }
+    }
+
+    /** makes the zip and keeps its upload state; false (said why) when it could not be made */
+    private boolean dumpCollect(File zip, Map<String, String> p, String code, String stock) {
+        l.message(Msg.DUMP_COLLECTING);
+        List<StockDump.Item> items = new ArrayList<>();
+        for (String[] f : host.facts()) items.add(StockDump.Item.text("app/" + f[0], f[1]));
+        String spkg = settingsPackage();
+        long apks = 0;
+        for (File f : spkg.isEmpty() ? java.util.Collections.<File>emptyList() : host.apkFiles(spkg)) {
+            items.add(StockDump.Item.binary("apk/" + spkg + "/" + f.getName(), f));
+            apks += f.length();
+        }
+        Root.Job job = new Root.Job("dump", Root.newNonce());
+        if (!spkg.isEmpty()) job.put("SETTINGS_PKG", spkg);
+        Root.Result r = det == null || dumpAllowed(det) ? runRoot(job, cfg.dumpTimeoutMs) : null;
+        boolean rooted = r != null && r.done;
+        File rd = rooted ? new File(r.kv("dump_dir")) : null;
+        Map<String, String> all = new java.util.HashMap<>(p);
+        String settingsText = "";
+        if (rooted && rd.isDirectory() && under(rd, dir)) {
+            File[] list = rd.listFiles();
+            if (list != null) {
+                Arrays.sort(list);
+                for (File f : list) {
+                    String n = f.getName();
+                    if (!f.isFile() || !n.matches("[a-z0-9_]+\\.txt")) continue;
+                    items.add(StockDump.Item.textFile("root/" + n, f));
+                    try {   // root's getprop sees what an app may not (the serial): its values feed the Scrubber too
+                        if (n.equals("getprop.txt")) all.putAll(Props.parse(StockDump.read(f, 8 << 20)));
+                        if (n.equals("settings.txt")) settingsText = StockDump.read(f, 8 << 20);
+                    } catch (IOException e) {
+                        l.log("dump: " + n + ": " + e.getMessage());
+                    }
+                }
+            }
+        } else {
+            l.message(Msg.DUMP_NO_ROOT);
+            if (r != null) l.log("dump: root part not made (" + (r.failed ? r.failCode + " " + r.failDetail : "no answer") + ")");
+        }
+        String serial = Props.get(all, "ro.serialno");
+        if (serial.isEmpty()) serial = Props.get(all, "ro.boot.serialno");
+        StringBuilder sum = new StringBuilder("Lumen Installer stock system info (format 2)\n");
+        sum.append("model: ").append(code).append('\n').append("board: ").append(Props.get(p, "ro.boot.hardware")).append('\n')
+                .append("stock: ").append(stock).append('\n').append("product: ").append(Props.get(p, "ro.vendor.xgimi.product.name")).append('\n')
+                .append("installer: ").append(cfg.appVersion).append('\n')
+                .append("verdict: ").append(det == null ? "-" : det.verdict).append('\n')
+                .append("catalog: ").append(det == null ? 0 : det.catalogSerial).append('\n')
+                .append("root: ").append(rooted ? "yes" : "no").append('\n')
+                .append("settings app: ").append(spkg.isEmpty() ? "-" : spkg).append(" (").append(apks).append(" bytes)\n")
+                .append("made: ").append(day(System.currentTimeMillis() / 1000)).append('\n')
+                .append("files: ").append(items.size()).append('\n');
+        try {
+            org.lumen.report.Scrubber sc = StockDump.scrubber(all, serial);
+            StockDump.settingLiterals(sc, settingsText);
+            StockDump.Result res = StockDump.write(zip, sum.toString(), items, sc);
+            for (String left : res.left) l.log("dump: left out " + left);
+            set("dump.upload", org.lumen.report.PartUpload.newUploadId());
+            set("dump.size", String.valueOf(zip.length()));
+            set("dump.made", String.valueOf(System.currentTimeMillis()));
+            set("dump.sha", org.lumen.report.PartUpload.sha256(zip));
+            set("dump.serial", serial);
+            set("dump.choked", "");
+            saveState();
+            l.log("dump made: " + res.files + " files, " + zip.length() + " B");
+            return true;
+        } catch (IOException e) {
+            String why = e.getMessage() == null ? e.toString() : e.getMessage();
+            l.log("dump not made: " + why);
+            l.message(Msg.DUMP_FAILED, why);
+            zip.delete();
+            return false;
+        } finally {
+            if (rd != null && under(rd, dir)) deleteTree(rd);
+        }
+    }
+
+    static boolean under(File f, File root) {
+        try {
+            return f.getCanonicalPath().startsWith(root.getCanonicalPath() + File.separator);
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private static void deleteTree(File f) {
+        File[] in = f.listFiles();
+        if (in != null) for (File c : in) deleteTree(c);
+        f.delete();
+    }
 
     // ------------------------------------------------------------------------------------------------- start
     /** The only step that writes outside the app: the trial goes into /data/gsi and one boot is armed. */
@@ -851,12 +1153,113 @@ public final class Engine {
         l.message(Msg.REBOOT_FAILED);
     }
 
+    // ------------------------------------------------------------------------------------------------- app update
+    /** the app update's file, in the app's own dir (deleted after the install) */
+    File appApk() { return new File(dir, "app-update.apk"); }
+
+    /** the package of the last app update that went in ("" = none yet) */
+    public String updatedPkg = "";
+
+    /**
+     * An installed Lumen OS whose app the catalog updates (its own update app refuses every install): a fresh catalog,
+     * the file (resumable), its sha256, then the file must be that app at that version, signed by the catalog's
+     * certificate exactly like the installed app; only then the system installer, which asks the user. Root is never
+     * used and nothing outside the app's own dir is written before the user confirms on the system screen.
+     */
+    public boolean updateApp() {
+        l.step(InstallStep.CHECK, StepStatus.RUNNING);
+        if (!refreshCatalog()) {
+            l.step(InstallStep.CHECK, StepStatus.FAILED);
+            det = detect();
+            return false;
+        }
+        Detection d = detect();
+        Catalog.AppUpdate u = d.appUpdate;
+        if (u == null) return fail(InstallStep.CHECK, d.verdict, d.args);
+        l.step(InstallStep.CHECK, StepStatus.DONE);
+
+        l.step(InstallStep.DOWNLOAD, StepStatus.RUNNING);
+        File f = appApk();
+        if (!u.sha256.equals(state("app.sha"))) {   // another file than the one a pause kept
+            f.delete();
+            st.remove("app.etag");
+            set("app.sha", u.sha256);
+            saveState();
+        }
+        String last;
+        try {
+            last = fetch(InstallStep.DOWNLOAD, u.apk, f, u.size, "app.etag");
+        } catch (Bytes.Stopped e) {
+            return stopped(InstallStep.DOWNLOAD);
+        }
+        if (last != null) return fail(InstallStep.DOWNLOAD, Msg.DOWNLOAD_INTERRUPTED, last);
+        l.message(Msg.DOWNLOADED, mb(u.size));
+        l.step(InstallStep.DOWNLOAD, StepStatus.DONE);
+
+        l.step(InstallStep.VERIFY, StepStatus.RUNNING);
+        String got;
+        try {
+            got = Bytes.sha256File(f, null, stopper);
+        } catch (Bytes.Stopped e) {
+            return stopped(InstallStep.VERIFY);
+        } catch (IOException e) {
+            return fail(InstallStep.VERIFY, Msg.ERROR, e.getMessage());
+        }
+        if (!got.equals(u.sha256)) {
+            l.log("sha256 " + got + " != " + u.sha256);
+            f.delete();
+            return fail(InstallStep.VERIFY, Msg.SHA_MISMATCH);
+        }
+        l.message(Msg.VERIFIED);
+        l.step(InstallStep.VERIFY, StepStatus.DONE);
+
+        l.step(InstallStep.PREPARE, StepStatus.RUNNING);
+        String why = appMismatch(u, host.appFile(f), host.app(u.pkg));
+        if (why != null) {
+            f.delete();
+            return fail(InstallStep.PREPARE, Msg.APP_UPDATE_BAD, why);
+        }
+        l.step(InstallStep.PREPARE, StepStatus.DONE);
+
+        l.step(InstallStep.START, StepStatus.RUNNING);
+        l.message(Msg.APP_UPDATE_CONFIRM);
+        String r = host.installApp(f, new Host.LineSink() {
+            @Override public void line(String s) { l.log(s); }
+        }, cfg.appInstallTimeoutMs);
+        f.delete();
+        Host.App now = host.app(u.pkg);
+        if (!"ok".equals(r)) return fail(InstallStep.START, Msg.APP_UPDATE_FAILED, r);
+        if (now == null || now.versionCode != u.versionCode) {
+            return fail(InstallStep.START, Msg.APP_UPDATE_FAILED, "version " + (now == null ? "none" : String.valueOf(now.versionCode)));
+        }
+        updatedPkg = u.pkg;
+        l.message(Msg.APP_UPDATED);
+        l.step(InstallStep.START, StepStatus.DONE);
+        det = detect();
+        return true;
+    }
+
+    /** null when the file is the catalog's app: its package and version, signed by the catalog's certificate and by
+     *  exactly the installed app's certificates, over an older installed version; else why not */
+    static String appMismatch(Catalog.AppUpdate u, Host.App file, Host.App have) {
+        if (file == null) return "not an app";
+        if (!u.pkg.equals(file.pkg)) return "package " + file.pkg;
+        if (file.versionCode != u.versionCode) return "version " + file.versionCode;
+        if (!java.util.Arrays.asList(file.signers.split(",")).contains(u.signer)) return "not signed by the catalog's certificate";
+        if (have == null) return "not installed";
+        if (have.versionCode >= u.versionCode) return "installed " + have.versionCode;
+        if (!file.signers.equals(have.signers)) return "signed by another certificate than the installed app";
+        return null;
+    }
+
     // ------------------------------------------------------------------------------------------------- helpers
     private Root.Result runRoot(Root.Job j, long timeout) {
+        return runRoot(j, timeout, l::log);
+    }
+
+    private Root.Result runRoot(Root.Job j, long timeout, Host.LineSink sink) {
         try {
-            return host.root(j, new Host.LineSink() {
-                @Override public void line(String s) { l.log(s); }
-            }, timeout);
+            return host.root(j, sink, timeout);
         } catch (IOException e) {
             l.log("root: " + e.getMessage());
             return null;

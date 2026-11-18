@@ -27,7 +27,10 @@ public interface Host {
      *  (/storage/&lt;id&gt;/Android/data/org.lumen.installer/files), which the app may write without any permission. */
     final class Volume {
         public final File root, appDir;
-        public Volume(File root, File appDir) { this.root = root; this.appDir = appDir; }
+        /** a USB stick (false: the built-in shared storage) */
+        public final boolean removable;
+        public Volume(File root, File appDir) { this(root, appDir, true); }
+        public Volume(File root, File appDir, boolean removable) { this.root = root; this.appDir = appDir; this.removable = removable; }
         @Override public String toString() { return root.getPath(); }
     }
 
@@ -40,4 +43,35 @@ public interface Host {
 
     /** May the app read files outside its own folder on a stick (the storage permission)? */
     default boolean canReadSticks() { return false; }
+
+    /** An app: its package, version code and signing certificates (sha256 of each, sorted, joined by commas). */
+    final class App {
+        public final String pkg, signers;
+        public final long versionCode;
+        public App(String pkg, long versionCode, String signers) { this.pkg = pkg; this.versionCode = versionCode; this.signers = signers; }
+    }
+
+    /** The installed app of this package, null = not installed. */
+    default App app(String pkg) { return null; }
+
+    /** The app an APK file holds, null = not an app. */
+    default App appFile(File apk) { return null; }
+
+    /** Hand an APK to the system installer, which asks the user, and wait for its answer: "ok" or why not. */
+    default String installApp(File apk, LineSink sink, long timeoutMs) { return "no installer"; }
+
+    /** What an ordinary app can read about the system without root, for the stock system info (StockDump): pairs of
+     *  a file name (getprop.txt, packages.txt ...) and its text. */
+    default List<String[]> facts() { return Collections.emptyList(); }
+    /** The APK files of an installed app (base, then splits), as any app may read them; empty: not installed. */
+    default List<File> apkFiles(String pkg) { return Collections.emptyList(); }
+    /** The system app that opens the Settings screen (android.settings.SETTINGS), "" when none answers. */
+    default String settingsActivityPackage() { return ""; }
+
+    /** The text of a small system file as an ordinary app may read it (the firmware versions card), null when it
+     *  cannot be read. */
+    default String file(String path) { return null; }
+
+    /** The kernel release of the running system (uname), "" when unknown. */
+    default String kernel() { return ""; }
 }

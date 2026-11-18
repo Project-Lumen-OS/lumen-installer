@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- lumen-about: the system Settings About rows (model code, firmware versions, Back to the XGIMI system), the same rows in Lumen Installer and the Back to the XGIMI system screen. Scan and close are the updater's about_scan and the report screen's close, the firmware word and the intro LumenDsuInstall's about_stock and about_back_2. -->
+<resources>
+    <string name="lumen_about_model_code">Model code</string>
+    <string name="lumen_about_dlp">DLP controller</string>
+    <string name="lumen_about_part_firmware">%1$s, firmware %2$s</string>
+    <string name="lumen_about_fpga">FPGA</string>
+    <string name="lumen_about_firmware">XGIMI firmware</string>
+    <string name="lumen_about_firmware_dated">%1$s from %2$s</string>
+    <string name="lumen_about_android">Android</string>
+    <string name="lumen_about_android_patch">%1$s, security update %2$s</string>
+    <string name="lumen_about_kernel">Kernel</string>
+    <string name="lumen_about_boot_loader">Startup firmware</string>
+    <string name="lumen_about_gmui">XGIMI interface</string>
+    <string name="lumen_about_platform">MediaTek platform</string>
+    <string name="lumen_about_remote">Remote</string>
+    <string name="lumen_about_wifi">Wi-Fi</string>
+    <string name="lumen_about_back">Back to the XGIMI system</string>
+    <string name="lumen_about_back_summary_file">USB stick file: %1$s</string>
+    <string name="lumen_about_back_summary">With the XGIMI recovery USB stick</string>
+    <string name="lumen_about_intro">The XGIMI recovery USB stick for this model brings the XGIMI system back. The guide on the project page shows how.</string>
+    <string name="lumen_about_usb_file">File name for the USB stick</string>
+    <string name="lumen_about_official">Official XGIMI file</string>
+    <string name="lumen_about_official_value">%1$s, %2$s bytes</string>
+    <string name="lumen_about_searching">Looking for the official file for this firmware</string>
+    <string name="lumen_about_guide_files">The guide on the project page lists the official XGIMI files.</string>
+    <string name="lumen_about_erases">The stick erases everything on the projector: apps, accounts, settings and files.</string>
+    <string name="lumen_about_scan">Scan with a phone to open</string>
+    <string name="lumen_about_close">Close</string>
+</resources>

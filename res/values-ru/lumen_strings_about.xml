@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <string name="lumen_about_model_code">Код модели</string>
+    <string name="lumen_about_dlp">Контроллер DLP</string>
+    <string name="lumen_about_part_firmware">%1$s, прошивка %2$s</string>
+    <string name="lumen_about_fpga">ПЛИС (FPGA)</string>
+    <string name="lumen_about_firmware">Прошивка XGIMI</string>
+    <string name="lumen_about_firmware_dated">%1$s от %2$s</string>
+    <string name="lumen_about_android">Android</string>
+    <string name="lumen_about_android_patch">%1$s, обновление безопасности %2$s</string>
+    <string name="lumen_about_kernel">Ядро</string>
+    <string name="lumen_about_boot_loader">Прошивка запуска</string>
+    <string name="lumen_about_gmui">Интерфейс XGIMI</string>
+    <string name="lumen_about_platform">Платформа MediaTek</string>
+    <string name="lumen_about_remote">Пульт</string>
+    <string name="lumen_about_wifi">Wi-Fi</string>
+    <string name="lumen_about_back">Возврат к системе XGIMI</string>
+    <string name="lumen_about_back_summary_file">Файл для флешки: %1$s</string>
+    <string name="lumen_about_back_summary">С флешкой восстановления XGIMI</string>
+    <string name="lumen_about_intro">Флешка восстановления XGIMI для этой модели возвращает систему XGIMI. Как это сделать, написано в инструкции на странице проекта.</string>
+    <string name="lumen_about_usb_file">Имя файла для флешки</string>
+    <string name="lumen_about_official">Официальный файл XGIMI</string>
+    <string name="lumen_about_official_value">%1$s, %2$s байт</string>
+    <string name="lumen_about_searching">Ищем официальный файл для этой прошивки</string>
+    <string name="lumen_about_guide_files">Официальные файлы XGIMI перечислены в инструкции на странице проекта.</string>
+    <string name="lumen_about_erases">Флешка стирает всё на проекторе: приложения, аккаунты, настройки и файлы.</string>
+    <string name="lumen_about_scan">Отсканируйте телефоном, чтобы открыть</string>
+    <string name="lumen_about_close">Закрыть</string>
+</resources>

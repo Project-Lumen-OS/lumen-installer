@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ui_lang">ru</string>
     <string name="app_name">Lumen Installer</string>
     <string name="title">Попробовать Lumen OS</string>
     <string name="working">Готовим пробный запуск Lumen OS</string>
+    <string name="versions_title">Версии прошивки</string>
     <string name="device_line">%1$s (%2$s), прошивка XGIMI %3$s</string>
     <string name="device_line_short">%1$s, прошивка XGIMI %2$s</string>
     <string name="trial_info">Lumen OS запустится один раз, на пробу. Система XGIMI и ваши файлы останутся как есть. Следующий перезапуск после пробы вернёт систему XGIMI. Чтобы оставить Lumen OS, выберите «Установить» внутри пробного запуска. В пробном запуске звук и часть видео могут пока не работать. Пока установщик работает, он пользуется сервисным доступом XGIMI на проекторе. Не выключайте проектор из розетки.</string>
@@ -23,7 +25,6 @@
     <string name="confirm_replace_body">Старая проба удалится, новая Lumen OS из выбранного источника подготовится и запустится. Система XGIMI останется как есть.</string>
     <string name="btn_again">Запустить пробу снова</string>
     <string name="btn_remove">Удалить пробный запуск</string>
-    <string name="btn_close">Закрыть</string>
     <string name="btn_cancel">Отмена</string>
     <string name="btn_back">Назад</string>
     <string name="btn_retry">Повторить</string>
@@ -119,6 +120,7 @@
     <string name="about_lic_installer">Lumen Installer и Lumen OS: Apache License 2.0.</string>
     <string name="about_lic_aosp">Android (AOSP) и LineageOS: Apache License 2.0 и другие открытые лицензии.</string>
     <string name="about_lic_font">Шрифт Onest: SIL Open Font License 1.1.</string>
+    <string name="about_lic_icons">Значки Material Symbols от Google: Apache License 2.0.</string>
     <string name="about_project_title">Страница проекта</string>
     <string name="about_project_1">github.com/Project-Lumen-OS/lumen-os</string>
     <string name="about_project_2">Новости и помощь: t.me/projector_lumenos</string>
@@ -143,4 +145,32 @@
     <string name="opt_version_stable_hint">Проверенный выпуск Lumen OS для этого проектора.</string>
     <string name="opt_version_beta_hint">Бета-версия тестовая. В ней могут быть ошибки. Проверка подлинности та же.</string>
     <string name="opt_version_beta_only">Есть только бета-версия</string>
+
+    <!-- установленная Lumen OS, чьё приложение обновления исправляет подписанный список (1.0.6) -->
+    <string name="msg_app_update_offered">На этом проекторе работает Lumen OS %1$s. Приложению «Обновление Lumen OS» нужно исправление, без него оно не ставит новые версии. Нажмите «Обновить Lumen OS». Приложения, настройки и файлы останутся как есть.</string>
+    <string name="msg_app_update_confirm">Подтвердите обновление на открывшемся экране. Если проектор спросит, можно ли Lumen Installer устанавливать приложения, разрешите и вернитесь назад.</string>
+    <string name="msg_app_updated">«Обновление Lumen OS» исправлено. Нажмите «Открыть Обновление Lumen OS», затем «Загрузить и установить». Новая Lumen OS придёт через интернет, данные сохранятся.</string>
+    <string name="msg_app_update_bad">Скачанный файл не подходит этому проектору (%1$s). Он удалён. Ничего не изменилось.</string>
+    <string name="msg_app_update_failed">«Обновление Lumen OS» не исправлено (%1$s). Больше ничего не изменилось. Нажмите «Обновить Lumen OS», чтобы попробовать снова.</string>
+    <string name="btn_app_update">Обновить Lumen OS</string>
+    <string name="btn_open_updater">Открыть Обновление Lumen OS</string>
+    <string name="btn_busy_app_update">Обновляется…</string>
+    <!-- версия прошивки, которой нет в списке для известной модели: пробу можно запустить всё равно -->
+    <string name="force_trial">Запустить пробную версию всё равно</string>
+    <string name="force_warning">Эта версия прошивки XGIMI у нас не проверена. Пробный запуск может пройти без звука или с тёмным экраном. Перезапуск проектора вернёт обычную систему. Установить Lumen OS насовсем с этой версии нельзя.</string>
+    <string name="msg_forced">Версия %1$s не проверена. Пробный запуск %2$s возможен на ваш риск.</string>
+    <!-- сведения о системе, которые пользователь может нам отправить -->
+    <string name="btn_dump">Отправить сведения</string>
+    <string name="btn_busy_dump">Отправляем…</string>
+    <string name="btn_send">Отправить</string>
+    <string name="dump_title">Отправить сведения о проекторе</string>
+    <string name="dump_body">Мы соберём сведения о системе проектора и отправим их нам: модель, версию прошивки, приложение настроек XGIMI, список приложений, части памяти и их размеры, журналы и настройки системы. Всего около 100 МБ. Так мы сможем сделать Lumen OS для вашей модели и прошивки. Пароли, сети Wi-Fi, аккаунты, ключи и серийный номер не отправляются. Проектор ничего не меняет. Если отправка прервётся, нажмите кнопку ещё раз, и она продолжится с того же места. Отправить?</string>
+    <string name="msg_dump_collecting">Собираем сведения о проекторе</string>
+    <string name="msg_dump_no_root">Нет доступа к системе. Отправим только основные сведения.</string>
+    <string name="msg_dump_no_space">На проекторе мало свободной памяти: свободно %1$s МБ, нужно %2$s МБ. Удалите лишние приложения или файлы и попробуйте ещё раз.</string>
+    <string name="msg_dump_resuming">Продолжаем отправку собранных ранее сведений, %1$s МБ</string>
+    <string name="msg_dump_sending">Отправляем: %1$s из %2$s МБ</string>
+    <string name="msg_dump_sent">Отправлено. Ваш код %1$s. Назовите его, если будете нам писать.</string>
+    <string name="msg_dump_failed">Не отправлено (%1$s). Ничего не изменилось. Попробуйте позже.</string>
+    <string name="msg_dump_paused">Пока не отправлено (%1$s). Нажмите «Отправить сведения» ещё раз, отправка продолжится с того же места.</string>
 </resources>

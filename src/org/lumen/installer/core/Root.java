@@ -18,9 +18,9 @@ import java.util.Map;
 public final class Root {
     private Root() {}
 
-    public static final String[] ACTIONS = { "probe", "install", "enable", "remove", "reboot" };
+    public static final String[] ACTIONS = { "probe", "install", "enable", "remove", "reboot", "dump" };
     public static final String[] KEYS = { "IMG", "TAIL", "IMG_SIZE", "TAIL_SIZE", "TOTAL", "USERDATA", "IMG_SHA",
-                                          "TAIL_SHA", "NEED_KIB", "MODEL" };
+                                          "TAIL_SHA", "NEED_KIB", "MODEL", "SETTINGS_PKG" };
 
     public static final class Job {
         public final String action, nonce;

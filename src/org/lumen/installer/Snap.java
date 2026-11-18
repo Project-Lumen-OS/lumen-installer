@@ -48,6 +48,9 @@ final class Snap {
     volatile boolean catalogTried;
     /** does the build install itself from the trial on this stock version: 1 yes, 0 no, -1 not checked yet */
     volatile int handover = -1;
+    /** an installed Lumen OS: the catalog's app update went in, the package of that app (its update screen opens) */
+    volatile boolean appUpdated;
+    volatile String appPkg = "";
 
     Snap() { resetSteps(); }
 
@@ -67,8 +70,9 @@ final class Snap {
         seq++;
     }
 
+    /** s null: work outside the five steps (the USB stick copy), the bar alone shows it */
     synchronized void progress(InstallStep s, long d, long t) {
-        curStep = s.ordinal();
+        if (s != null) curStep = s.ordinal();
         done = d;
         total = t;
         seq++;

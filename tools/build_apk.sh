@@ -40,6 +40,11 @@ log "aapt2 compile + link (min $MIN, target $TGT)"
 set -- link -o "$B/base.apk" -I "$AJ" --manifest "$APP/AndroidManifest.xml" --min-sdk-version "$MIN" \
   --target-sdk-version "$TGT" --java "$B/gen"
 [ -d "$APP/assets" ] && set -- "$@" -A "$APP/assets"
+# R_EXTRA_PACKAGES (one Java package per line): R classes for the shared modules that read their own R (lumen-icons)
+if [ -f "$APP/R_EXTRA_PACKAGES" ]; then
+  XP=$(grep -v '^#' "$APP/R_EXTRA_PACKAGES" | grep . | tr '\n' ':' | sed 's/:$//')
+  [ -n "$XP" ] && set -- "$@" --extra-packages "$XP"
+fi
 "$BT/aapt2" "$@" "$B/res.zip"
 
 # argfile entries are quoted: the folder may have spaces

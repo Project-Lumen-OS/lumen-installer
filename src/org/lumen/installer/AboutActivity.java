@@ -54,7 +54,8 @@ public class AboutActivity extends Activity {
                 getString(R.string.about_installer, app));
         card(R.string.about_what_title, getString(R.string.about_what_1), getString(R.string.about_what_2), getString(R.string.about_what_3));
         card(R.string.about_back_title, getString(R.string.about_back_1), getString(R.string.about_back_2), getString(R.string.about_back_3));
-        card(R.string.about_lic_title, getString(R.string.about_lic_installer), getString(R.string.about_lic_aosp), getString(R.string.about_lic_font));
+        card(R.string.about_lic_title, getString(R.string.about_lic_installer), getString(R.string.about_lic_aosp), getString(R.string.about_lic_font),
+                getString(R.string.about_lic_icons));
         card(R.string.about_project_title, getString(R.string.about_project_1), getString(R.string.about_project_2));
 
         // the technical log, folded away (for whoever helps)

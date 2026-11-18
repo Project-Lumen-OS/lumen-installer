@@ -9,6 +9,16 @@ public enum Msg {
     // detection (no root, no network): the projector's props against its entry of the signed catalog of builds
     SUPPORTED(0), NO_BUILD(2), COMPUTER_ONLY(2), BOARD_MISMATCH(2), ALREADY_LUMEN(1), IN_TRIAL(0),
     NOT_ORANGE(1), STOCK_UNSUPPORTED(2), MODEL_STOCK_UNSUPPORTED(3),
+    // the user ticked "start the trial anyway" on a stock version the catalog does not list (stock, build version)
+    FORCED(2),
+    // the stock system info (StockDump, Engine.dump): collecting, without the root part, too little free memory (free
+    // MB, needed MB), going on with the zip made before (MB), sending (sent MB, total MB), sent (code), not sent and
+    // dropped (why), not sent yet and kept to go on with the next press (why)
+    DUMP_COLLECTING(0), DUMP_NO_ROOT(0), DUMP_NO_SPACE(2), DUMP_RESUMING(1), DUMP_SENDING(2), DUMP_SENT(1), DUMP_FAILED(1),
+    DUMP_PAUSED(1),
+    // an installed Lumen OS whose app the catalog updates (1.0.6): offered, confirm on the system screen, done, the
+    // file is not that app (why), the system installer did not take it (why)
+    APP_UPDATE_OFFERED(1), APP_UPDATE_CONFIRM(0), APP_UPDATED(0), APP_UPDATE_BAD(1), APP_UPDATE_FAILED(1),
     // the signed catalog: not there yet, bad signature or content, older than one already seen, offline (the kept
     // one's day); CATALOG_NOTE shows the catalog's own text for this model in the user's language
     CATALOG_MISSING(0), CATALOG_BAD_SIG(0), CATALOG_BAD(1), CATALOG_OLD(2), CATALOG_NOTE(1), CATALOG_LOADING(0), CATALOG_OFFLINE(1),

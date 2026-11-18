@@ -15,14 +15,24 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
+import org.lumen.about.AboutRow;
+import org.lumen.about.AboutRows;
+import org.lumen.about.RowText;
+import org.lumen.icons.IconStatus;
+import org.lumen.icons.Icons;
 import org.lumen.installer.core.ActionGate;
 import org.lumen.installer.core.Engine;
+import org.lumen.installer.core.Host;
 import org.lumen.installer.core.ImageSource;
 import org.lumen.installer.core.Msg;
 import org.lumen.installer.core.ReleaseChannel;
@@ -31,13 +41,15 @@ import org.lumen.installer.core.Task;
 import org.lumen.installer.core.TrialState;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * One TV screen (D-pad), 960x540 dp: the projector and the verdict on the left with the trial warning and the
- * buttons; the five steps with their progress and the last log lines on the right. Every action that writes outside
+ * buttons; the five steps with their progress on the right, under them the card Firmware versions (the same rows as
+ * the About page of Lumen OS, apps/core/lumen-about). Every action that writes outside
  * the app (start the trial, restart, remove the trial) asks first, with Cancel focused. Above the buttons, before a
- * step ran: where the image comes from (download, or a LumenOS folder on a USB stick); in the steps card the version
- * (the catalog's stable build, or its newest beta). A button that starts a task works once: until the task ends it
+ * step ran: where the image comes from (download, or a LumenOS folder on a USB stick), under it the version (the
+ * catalog's stable build, or its newest beta). A button that starts a task works once: until the task ends it
  * says what runs ("Restarting…") and the remote does nothing on it (ActionGate).
  */
 public class MainActivity extends Activity {
@@ -45,12 +57,24 @@ public class MainActivity extends Activity {
     static final int BG = Look.BG, CARD = Look.CARD, TEXT = Look.TEXT, DIM = Look.DIM, ACCENT = Look.ACC_SOFT,
             OK = Look.OK, BAD = Look.BAD, WARN = Look.WARN;
     final Handler h = new Handler(Looper.getMainLooper());
-    TextView device, verdict, status, logView;
-    TextView[] stepMark = new TextView[5], stepName = new TextView[5], stepInfo = new TextView[5];
+    TextView device, verdict, status, trialInfo, forceWarn;
+    /** the messages the status line may show, newest last (fitStatus picks the newest that fit) */
+    final List<String> statusLines = new java.util.ArrayList<>();
+    /** the card Firmware versions: the rows of lumen-about (the About page of Lumen OS shows the same ones) */
+    LinearLayout steps, versionRows;
+    ScrollView versions;
+    String versionsKey = "";
+    /** "start the trial anyway": a row with the check on the right and the warning under it */
+    LinearLayout forceBox, forceRow;
+    CheckBox forceCheck;
+    ImageView[] stepMark = new ImageView[5];
+    TextView[] stepName = new TextView[5], stepInfo = new TextView[5];
     ProgressBar bar;
     LinearLayout buttons, options, version;
     String buttonKey = "", optionsKey = "";
     int seenSeq = -1;
+    /** BACK went down on this screen (its release closes the app) */
+    boolean backDown;
     /** the controls that work while a task runs (Pause of a download, About): OK on any other view does nothing */
     static final Object OFFERED = new Object();
     AlertDialog asking;
@@ -61,7 +85,8 @@ public class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.HORIZONTAL);
         root.setBackgroundColor(BG);
-        root.setPadding(dp(44), dp(30), dp(44), dp(26));
+        // inside the TV title safe area (27 dp at the top and the bottom)
+        root.setPadding(dp(44), dp(30), dp(44), dp(27));
 
         LinearLayout left = new LinearLayout(this);
         left.setOrientation(LinearLayout.VERTICAL);
@@ -84,53 +109,87 @@ public class MainActivity extends Activity {
         left.addView(device, lp(0, dp(4), 0, 0));
         verdict = text("", 17, TEXT);
         left.addView(verdict, lp(0, dp(14), 0, 0));
-        TextView info = text(getString(R.string.trial_info), 13, TEXT);
-        info.setLineSpacing(0, 1.15f);
-        info.setPadding(dp(14), dp(12), dp(14), dp(12));
-        info.setBackground(round(CARD, dp(18)));
-        left.addView(info, lp(0, dp(14), 0, 0));
+        trialInfo = text(getString(R.string.trial_info), 13, TEXT);
+        trialInfo.setLineSpacing(0, 1.15f);
+        trialInfo.setPadding(dp(14), dp(12), dp(14), dp(12));
+        trialInfo.setBackground(round(CARD, dp(18)));
+        left.addView(trialInfo, lp(0, dp(14), 0, 0));
+        forceBox = new LinearLayout(this);
+        forceBox.setOrientation(LinearLayout.VERTICAL);
+        forceRow = new LinearLayout(this);
+        forceRow.setOrientation(LinearLayout.HORIZONTAL);
+        forceRow.setGravity(Gravity.CENTER_VERTICAL);
+        forceRow.setFocusable(true);
+        forceRow.setClickable(true);
+        forceRow.setPadding(dp(14), dp(6), dp(8), dp(6));
+        forceRow.setBackground(round(CARD, dp(14)));
+        forceRow.setOnFocusChangeListener((v, has) -> v.setBackground(round(has ? ACCENT : CARD, dp(14))));
+        forceRow.addView(text(getString(R.string.force_trial), 15, TEXT), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        forceCheck = new CheckBox(this);
+        forceCheck.setFocusable(false);
+        forceCheck.setClickable(false);
+        forceRow.addView(forceCheck);
+        forceRow.setOnClickListener(v -> toggleForce());
+        forceBox.addView(forceRow, lp(0, 0, 0, 0));
+        forceWarn = text(getString(R.string.force_warning), 12, DIM);
+        forceBox.addView(forceWarn, lp(dp(4), dp(6), 0, 0));
+        forceBox.setVisibility(View.GONE);
+        left.addView(forceBox, lp(0, dp(12), 0, 0));
+        // the messages take the room between the warning and the choices: the newest ones that fit (fitStatus), so
+        // the choices and the buttons always keep their place
         status = text("", 14, ACCENT);
         status.setLineSpacing(0, 1.1f);
-        left.addView(status, lp(0, dp(14), 0, 0));
-        View spacer = new View(this);
-        left.addView(spacer, new LinearLayout.LayoutParams(1, 0, 1f));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        sp.topMargin = dp(14);
+        left.addView(status, sp);
+        status.addOnLayoutChangeListener((v, l, t, r, bt, ol, ot, or, ob) -> fitStatus());
         options = new LinearLayout(this);
         options.setOrientation(LinearLayout.HORIZONTAL);
         left.addView(options, lp(0, dp(10), 0, 0));
+        // Version: Stable / Beta (a model with a stable and a beta build, download source, before the first step): a
+        // row under the source choice, the line beside the button says what the choice means. A model with a beta
+        // only gets that line alone (no choice: its beta is read)
+        version = new LinearLayout(this);
+        version.setOrientation(LinearLayout.HORIZONTAL);
+        version.setGravity(Gravity.CENTER_VERTICAL);
+        version.setClipChildren(false);
+        version.setClipToPadding(false);
+        version.setVisibility(View.GONE);
+        left.addView(version, lp(0, dp(10), 0, 0));
         buttons = new LinearLayout(this);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         left.addView(buttons, lp(0, dp(10), 0, 0));
 
+        // the right column: the steps card, under it the card Firmware versions (facts only, no choice in this column,
+        // so every version row has room on every model)
+        LinearLayout side = new LinearLayout(this);
+        side.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(dp(330), LinearLayout.LayoutParams.MATCH_PARENT);
+        rp.leftMargin = dp(28);
+        root.addView(side, rp);
         LinearLayout right = new LinearLayout(this);
         right.setOrientation(LinearLayout.VERTICAL);
         right.setPadding(dp(18), dp(16), dp(18), dp(16));
         right.setBackground(round(CARD, dp(18)));
-        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(dp(330), LinearLayout.LayoutParams.MATCH_PARENT);
-        rp.leftMargin = dp(28);
-        root.addView(right, rp);
+        side.addView(right, lp(0, 0, 0, 0));
+        steps = right;
         String[] names = { getString(R.string.step_check), getString(R.string.step_download), getString(R.string.step_verify),
                 getString(R.string.step_prepare), getString(R.string.step_start) };
         for (int i = 0; i < 5; i++) {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            stepMark[i] = text("\u25CB", 16, DIM);
-            stepMark[i].setGravity(Gravity.CENTER);
-            row.addView(stepMark[i], new LinearLayout.LayoutParams(dp(26), LinearLayout.LayoutParams.WRAP_CONTENT));
+            stepMark[i] = Icons.view(this, R.drawable.lumen_ic_pending, 18);
+            Icons.status(stepMark[i], IconStatus.PENDING, DIM);
+            LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(dp(18), dp(18));
+            mp.setMarginEnd(dp(8));
+            row.addView(stepMark[i], mp);
             stepName[i] = text((i + 1) + ". " + names[i], 15, TEXT);
             row.addView(stepName[i], new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
             stepInfo[i] = text("", 12, DIM);
             row.addView(stepInfo[i]);
             right.addView(row, lp(0, i == 0 ? 0 : dp(9), 0, 0));
         }
-        // Version: Stable / Beta (a model with a stable and a beta build, download source, before the first step):
-        // under the steps, where the card has room; the line under it says what the choice means. A model with a beta
-        // only gets one line there instead (no choice: its beta is read)
-        version = new LinearLayout(this);
-        version.setOrientation(LinearLayout.VERTICAL);
-        version.setClipChildren(false);
-        version.setClipToPadding(false);
-        right.addView(version, lp(0, dp(16), 0, 0));
         bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         bar.setMax(1000);
         bar.setProgressTintList(android.content.res.ColorStateList.valueOf(Look.ACC));
@@ -138,8 +197,8 @@ public class MainActivity extends Activity {
         bar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Look.ACC));
         right.addView(bar, lp(0, dp(16), 0, 0));
         // the technical log is not shown here (plain words only): About shows its last lines under "Details for help"
-        logView = text("", 12, DIM);
-        right.addView(logView, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        // as tall as its rows (no empty block under them), at most the room left under the steps card
+        side.addView(versionsCard(), lp(0, dp(12), 0, 0));
         setContentView(root);
         TvFocus.unclip(root);
     }
@@ -165,6 +224,7 @@ public class MainActivity extends Activity {
     @Override protected void onPause() {
         super.onPause();
         h.removeCallbacks(tick);
+        backDown = false;
     }
 
     final Runnable tick = new Runnable() {
@@ -174,10 +234,16 @@ public class MainActivity extends Activity {
         }
     };
 
-    /** While a task runs the remote does nothing on its button, see {@link ActionGate#swallows}. */
+    /** While a task runs the remote does nothing on its button, see {@link ActionGate#swallows}. There is no Close
+     *  button: BACK closes the app wherever the gate lets it through (pressed and let go on this screen). */
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
         View f = getCurrentFocus();
         if (Snap.I.gate.swallows(key(e.getKeyCode()), f != null && f.getTag() == OFFERED)) return true;
+        if (key(e.getKeyCode()) == ActionGate.Key.BACK) {
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) backDown = true;
+            else if (e.getAction() == KeyEvent.ACTION_UP && backDown && !e.isCanceled()) finish();
+            return true;
+        }
         return super.dispatchKeyEvent(e);
     }
 
@@ -208,22 +274,26 @@ public class MainActivity extends Activity {
                     : getString(R.string.device_line, d.name, code, stock));
             boolean loading = d.verdict == Msg.CATALOG_MISSING && s.gate.held() == Task.CATALOG;
             verdict.setText(loading ? msg(Msg.CATALOG_LOADING, null) : msg(d.verdict, d.args));
-            verdict.setTextColor(d.ok() ? OK : loading || d.verdict == Msg.CATALOG_MISSING ? WARN : BAD);
+            verdict.setTextColor(d.ok() || d.verdict == Msg.APP_UPDATE_OFFERED ? OK : loading || d.verdict == Msg.CATALOG_MISSING ? WARN : BAD);
+            // an installed Lumen OS: the trial text does not apply
+            boolean lumen = d.verdict == Msg.ALREADY_LUMEN || d.verdict == Msg.APP_UPDATE_OFFERED;
+            trialInfo.setVisibility(lumen ? View.GONE : View.VISIBLE);
+            // only before the first step ran and while nothing runs (nothing to undo then)
+            boolean force = d.forceOffered && !s.busy && s.gate.held() == null && !s.prepared && !s.armed
+                    && s.trial == TrialState.NONE;
+            forceBox.setVisibility(force ? View.VISIBLE : View.GONE);
+            forceCheck.setChecked(d.forced);
         }
         // the last three messages of this run, newest last (e.g. the release found, the space check, the step result)
         List<Snap.Line> ms = s.messages();
-        StringBuilder sb = new StringBuilder();
-        for (int i = Math.max(0, ms.size() - 3); i < ms.size(); i++) {
-            if (sb.length() > 0) sb.append('\n');
-            sb.append(msg(ms.get(i).msg, ms.get(i).args));
-        }
-        status.setText(sb.toString());
+        statusLines.clear();
+        for (int i = Math.max(0, ms.size() - 3); i < ms.size(); i++) statusLines.add(msg(ms.get(i).msg, ms.get(i).args));
+        fitStatus();
         for (int i = 0; i < 5; i++) {
             StepStatus st = s.steps[i];
-            stepMark[i].setText(st == StepStatus.DONE ? "\u2713" : st == StepStatus.FAILED ? "\u2717"
-                    : st == StepStatus.RUNNING ? "\u25CF" : "\u25CB");
-            stepMark[i].setTextColor(st == StepStatus.DONE ? OK : st == StepStatus.FAILED ? BAD
-                    : st == StepStatus.RUNNING ? ACCENT : DIM);
+            Icons.status(stepMark[i], st == StepStatus.DONE ? IconStatus.DONE : st == StepStatus.FAILED ? IconStatus.FAILED
+                    : st == StepStatus.RUNNING ? IconStatus.RUNNING : IconStatus.PENDING,
+                    st == StepStatus.DONE ? OK : st == StepStatus.FAILED ? BAD : st == StepStatus.RUNNING ? ACCENT : DIM);
             stepInfo[i].setText("");
         }
         int cur = s.curStep;
@@ -231,13 +301,17 @@ public class MainActivity extends Activity {
             bar.setIndeterminate(false);
             bar.setProgress((int) (s.done * 1000 / s.total));
             stepInfo[cur].setText(cur == 1 ? (s.done >> 20) + " / " + (s.total >> 20) + " MB" : (s.done * 100 / s.total) + "%");
+        } else if (s.busy && s.task == Task.DUMP && s.total > 0) {
+            // the stock system info goes out outside the five steps: the bar alone, bytes sent of the zip
+            bar.setIndeterminate(false);
+            bar.setProgress((int) (Math.min(s.done, s.total) * 1000 / s.total));
         } else if (s.busy && cur >= 0 && s.steps[cur] == StepStatus.RUNNING) {
             bar.setIndeterminate(true);
         } else {
             bar.setIndeterminate(false);
             bar.setProgress(0);
         }
-        logView.setText("");
+        renderVersions(d);
         renderButtons(s);
     }
 
@@ -248,7 +322,9 @@ public class MainActivity extends Activity {
         if (held != null) key = "held:" + held + (held.pausable && s.busy && s.task == held ? ":pause" : "");
         else if (s.busy) key = "busy";
         else if (d != null && d.verdict == Msg.CATALOG_MISSING) key = "nocatalog";
-        else if (d == null || !d.ok()) key = "close";
+        else if (s.appUpdated) key = "appdone";
+        else if (d != null && d.appUpdate != null) key = "appupdate";
+        else if (d == null || !d.ok()) key = "refused";
         else if (s.armed) key = "armed";
         else if (s.trial == TrialState.OURS) key = "ours";
         else if (s.trial == TrialState.OTHER) key = "other";
@@ -274,15 +350,21 @@ public class MainActivity extends Activity {
                 Snap.I.seq++;
                 render();
             });
-            add(R.string.btn_close, v -> finish());
-        } else if ("close".equals(key)) {
-            first = add(R.string.btn_close, v -> finish());
+            addDumpButtons(d);
+        } else if ("refused".equals(key)) {
+            // an unknown model or stock version: the system info helps us make a build for it
+            first = addDumpButtons(d);
+        } else if ("appupdate".equals(key)) {
+            // an installed Lumen OS whose update app the catalog fixes: that app first, then Lumen OS updates itself
+            first = add(R.string.btn_app_update, v -> act(Task.APP_UPDATE));
+        } else if ("appdone".equals(key)) {
+            first = add(R.string.btn_open_updater, v -> openUpdater());
         } else if ("idle".equals(key)) {
             first = add(R.string.btn_prepare, v -> act(Task.PREPARE));
-            add(R.string.btn_close, v -> finish());
+            addDumpButtons(d);
         } else if ("continue".equals(key)) {
             first = add(R.string.btn_continue, v -> act(Task.PREPARE));
-            add(R.string.btn_close, v -> finish());
+            addDumpButtons(d);
         } else if ("ready".equals(key)) {
             String keep = getString(s.handover == 1 ? R.string.confirm_keep_yes : R.string.confirm_keep_no);
             String space = s.need.isEmpty() ? "" : " " + getString(R.string.confirm_space, Engine.gb(Engine.parseLongSafe(s.need)),
@@ -303,47 +385,45 @@ public class MainActivity extends Activity {
             add(R.string.btn_again, v -> act(Task.AGAIN));
             add(R.string.btn_remove, v -> confirm(R.string.confirm_remove_title, getString(R.string.confirm_remove_body),
                     R.string.btn_remove, () -> act(Task.REMOVE)));
-            add(R.string.btn_close, v -> finish());
         } else if ("other".equals(key)) {
             first = add(R.string.btn_remove, v -> confirm(R.string.confirm_remove_title, getString(R.string.confirm_remove_body),
                     R.string.btn_remove, () -> act(Task.REMOVE)));
-            add(R.string.btn_close, v -> finish());
         }
-        final Button f = first;
+        // no button (a refused model without the system info): the "start anyway" row when it is offered
+        final View f = first != null ? first : forceBox.getVisibility() == View.VISIBLE ? forceRow : null;
         if (f != null) buttons.post(() -> f.requestFocus());
         linkFocus();
     }
 
-    /** D-pad: RIGHT from the buttons and the source choice goes to the choices in the steps card (the nearest view to
-     *  the right would be the round "i" otherwise), LEFT from there back to the first button. */
+    /** D-pad: the "start anyway" row, the source choice, the version choice and the buttons are rows of one column
+     *  (UP / DOWN between them, UP from the top one reaches the round "i"); LEFT on the first control of a row and
+     *  RIGHT on the last stay there, so the sideways keys never jump up to the "i". */
     void linkFocus() {
-        View first = null;
-        for (int i = 0; i < version.getChildCount() && first == null; i++) {
-            View r = version.getChildAt(i);
-            if (r instanceof LinearLayout && ((LinearLayout) r).getChildCount() > 0) first = ((LinearLayout) r).getChildAt(0);
-        }
-        int to = View.NO_ID;
-        if (first != null && version.getVisibility() == View.VISIBLE) {
-            if (first.getId() == View.NO_ID) first.setId(View.generateViewId());
-            to = first.getId();
-        }
-        View back = buttons.getChildCount() > 0 ? buttons.getChildAt(0) : options.getChildCount() > 0 ? options.getChildAt(0) : null;
-        if (back != null && back.getId() == View.NO_ID) back.setId(View.generateViewId());
-        for (LinearLayout row : new LinearLayout[] { options, buttons }) {
-            for (int i = 0; i < row.getChildCount(); i++) row.getChildAt(i).setNextFocusRightId(i == row.getChildCount() - 1 ? to : View.NO_ID);
-        }
-        for (int i = 0; i < version.getChildCount(); i++) {
-            View r = version.getChildAt(i);
-            if (r instanceof LinearLayout && ((LinearLayout) r).getChildCount() > 0) {
-                ((LinearLayout) r).getChildAt(0).setNextFocusLeftId(back != null ? back.getId() : View.NO_ID);
+        for (LinearLayout row : new LinearLayout[] { forceBox, options, version, buttons }) {
+            View first = null, last = null;
+            for (int i = 0; i < row.getChildCount(); i++) {
+                View v = row.getChildAt(i);
+                v.setNextFocusLeftId(View.NO_ID);
+                v.setNextFocusRightId(View.NO_ID);
+                if (!v.isFocusable()) continue;
+                if (first == null) first = v;
+                last = v;
             }
+            if (first == null) continue;
+            first.setNextFocusLeftId(ownId(first));
+            last.setNextFocusRightId(ownId(last));
         }
     }
 
-    /** The choices, only before the first step ran (nothing to undo then): the source on the left above the buttons;
-     *  in the steps card, where there is room, the version (a model with a stable and a beta build, download source:
-     *  the stable build by default, Beta switches to the newest beta) with a line on what it means, or for a model with
-     *  a beta only the line that only a beta exists (no choice). */
+    static int ownId(View v) {
+        if (v.getId() == View.NO_ID) v.setId(View.generateViewId());
+        return v.getId();
+    }
+
+    /** The choices, only before the first step ran (nothing to undo then), above the buttons: the source, under it the
+     *  version (a model with a stable and a beta build, download source: the stable build by default, Beta switches to
+     *  the newest beta) with a line beside it on what it means, or for a model with a beta only the line that only a
+     *  beta exists (no choice). */
     void renderOptions(Snap s, String key) {
         boolean show = "idle".equals(key) || "continue".equals(key) || "nocatalog".equals(key);
         boolean beta = show && s.source == ImageSource.NET && s.det != null && s.det.betaOffered;
@@ -375,7 +455,7 @@ public class MainActivity extends Activity {
         View focus = null;
         if (beta) {
             // Version: Stable (the catalog's stable build) or Beta (its newest beta, the same safety check); remembered
-            Button b = addTo(row(), s.channel == ReleaseChannel.BETA ? getString(R.string.opt_version_beta, s.det.betaVersion)
+            Button b = addTo(version, s.channel == ReleaseChannel.BETA ? getString(R.string.opt_version_beta, s.det.betaVersion)
                     : getString(R.string.opt_version_stable, s.det.stableVersion), v -> {
                 if (Snap.I.busy || Snap.I.gate.held() != null) return;
                 ReleaseChannel n = Snap.I.channel == ReleaseChannel.BETA ? ReleaseChannel.STABLE : ReleaseChannel.BETA;
@@ -389,23 +469,39 @@ public class MainActivity extends Activity {
             });
             b.setTag("version");
             if ("version".equals(tag)) focus = b;
-            TextView hint = text(getString(s.channel == ReleaseChannel.BETA ? R.string.opt_version_beta_hint : R.string.opt_version_stable_hint), 12, DIM);
-            version.addView(hint, lp(0, dp(8), 0, 0));
+            TextView hint = text(getString(s.channel == ReleaseChannel.BETA ? R.string.opt_version_beta_hint : R.string.opt_version_stable_hint), 13, DIM);
+            hint.setLineSpacing(0, 1.05f);
+            version.addView(hint, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         } else if (only) {
             // a model with a beta only: no Stable / Beta choice, one line (the beta is read without a choice)
-            version.addView(text(getString(R.string.opt_version_beta_only), 14, TEXT), lp(0, 0, 0, 0));
+            version.addView(text(getString(R.string.opt_version_beta_only), 14, TEXT), new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         }
         if (focus != null) { final View f = focus; version.post(f::requestFocus); }
         else if (fi >= 0 && fi < options.getChildCount()) { final View f = options.getChildAt(fi); options.post(f::requestFocus); }
     }
 
-    /** one row of the choices in the steps card */
-    LinearLayout row() {
-        LinearLayout r = new LinearLayout(this);
-        r.setOrientation(LinearLayout.HORIZONTAL);
-        r.setClipChildren(false);
-        version.addView(r, lp(0, version.getChildCount() == 0 ? 0 : dp(12), 0, 0));
-        return r;
+    /** "start the trial anyway" on or off: the verdict and the build follow at once, nothing ran yet */
+    void toggleForce() {
+        if (Snap.I.busy || Snap.I.gate.held() != null) return;
+        Engine e = WorkService.engine(this);
+        e.setForce(!e.force());
+        Snap.I.det = e.detect();
+        Snap.I.resetSteps();
+        Snap.I.prepared = false;
+        render();
+        forceRow.requestFocus();
+    }
+
+    /** the stock system info: asked first, sent by the service */
+    void askDump() {
+        confirm(R.string.dump_title, getString(R.string.dump_body), R.string.btn_send, () -> act(Task.DUMP));
+    }
+
+    /** on the XGIMI system (not in a trial, not on Lumen OS): send the system info (the full firmware copy to a USB
+     *  stick is LumenDump's) */
+    Button addDumpButtons(Engine.Detection d) {
+        return Engine.dumpAllowed(d) ? add(R.string.btn_dump, v -> askDump()) : null;
     }
 
     /** Every button that starts a task comes here: the first press takes the gate and hands the task to the service,
@@ -427,7 +523,22 @@ public class MainActivity extends Activity {
             case PREPARE: case REPLACE: return R.string.btn_busy_prepare;
             case START: case AGAIN: return R.string.btn_busy_start;
             case REMOVE: return R.string.btn_busy_remove;
+            case APP_UPDATE: return R.string.btn_busy_app_update;
+            case DUMP: return R.string.btn_busy_dump;
             default: return R.string.btn_busy_restart;
+        }
+    }
+
+    /** The update screen of Lumen OS (the system update settings), of the app just updated when it has one. */
+    void openUpdater() {
+        Intent i = new Intent("android.settings.SYSTEM_UPDATE_SETTINGS");
+        Intent own = new Intent(i).setPackage(Snap.I.appPkg);
+        if (!Snap.I.appPkg.isEmpty() && own.resolveActivity(getPackageManager()) != null) i = own;
+        try {
+            startActivity(i);
+        } catch (android.content.ActivityNotFoundException e) {
+            Snap.I.message(Msg.ERROR, new String[] { String.valueOf(e.getMessage()) });
+            render();
         }
     }
 
@@ -446,6 +557,96 @@ public class MainActivity extends Activity {
         });
         asking = d;
         d.show();
+    }
+
+    // ------------------------------------------------------------------------------------------- firmware versions
+    /** The card under the steps: its title and the rows. It is as tall as its rows and never takes focus (read only
+     *  facts): a list longer than the room left under the steps card fades out at the card's lower edge. */
+    View versionsCard() {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        TextView title = Look.text(this, getString(R.string.versions_title), 15, TEXT, 560);
+        content.addView(title);
+        versionRows = new LinearLayout(this);
+        versionRows.setOrientation(LinearLayout.VERTICAL);
+        content.addView(versionRows, lp(0, dp(2), 0, 0));
+        versions = new ScrollView(this);
+        versions.setBackground(round(CARD, dp(18)));
+        versions.setPadding(dp(18), dp(12), dp(18), dp(10));
+        versions.setFocusable(false);
+        versions.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        versions.setDefaultFocusHighlightEnabled(false);
+        versions.setVerticalScrollBarEnabled(false);
+        versions.setVerticalFadingEdgeEnabled(true);
+        versions.setFadingEdgeLength(dp(28));
+        versions.addView(content);
+        versions.setVisibility(View.GONE);
+        return versions;
+    }
+
+    /** One row per version the projector names (lumen-about AboutRows.versions), the card hidden when it names none. */
+    void renderVersions(Engine.Detection d) {
+        List<AboutRow> rows = d == null || d.facts == null ? java.util.Collections.emptyList()
+                : AboutRows.versions(d.facts, this::rowText, true);
+        StringBuilder key = new StringBuilder();
+        for (AboutRow r : rows) key.append(r.title).append('\t').append(r.summary).append('\n');
+        if (key.toString().equals(versionsKey)) return;
+        versionsKey = key.toString();
+        versionRows.removeAllViews();
+        // one row view per version: the name and its value side by side on the first line, a long value wraps inside
+        // its own row (the name stays at the row's top) and a thin line closes every row, so a wrapped value never
+        // reads as the value of the next name
+        for (AboutRow r : rows) {
+            if (versionRows.getChildCount() > 0) {
+                View line = new View(this);
+                line.setBackgroundColor(Look.CARD3);
+                versionRows.addView(line, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, dp(1) / 2)));
+            }
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setPadding(0, dp(2), 0, dp(2));
+            TextView name = Look.text(this, r.title, 12, DIM, 400);
+            name.setLineSpacing(0, 1f);
+            name.setMaxWidth(dp(150));
+            row.addView(name, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            // a hyphen before a letter may end a line (a long platform name breaks between its words), a date never does
+            TextView value = Look.text(this, r.summary.replaceAll("-(?=\\p{L})", "-\u200B"), 12, TEXT, 400);
+            value.setLineSpacing(0, 1f);
+            value.setGravity(Gravity.END);
+            LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            vp.setMarginStart(dp(12));
+            row.addView(value, vp);
+            versionRows.addView(row, lp(0, 0, 0, 0));
+        }
+        // no versions: the steps card fills the column as before
+        boolean none = rows.isEmpty();
+        versions.setVisibility(none ? View.GONE : View.VISIBLE);
+        steps.setLayoutParams(none ? new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f) : lp(0, 0, 0, 0));
+    }
+
+    /** a row text of lumen-about: RowText X is the string lumen_about_x (the module's texts are part of this app) */
+    String rowText(RowText t) {
+        int id = getResources().getIdentifier("lumen_about_" + t.name().toLowerCase(Locale.ROOT), "string", getPackageName());
+        return id == 0 ? t.name() : getString(id);
+    }
+
+    /** The newest messages whose lines fit the room of the status line (at least the newest one), newest last. */
+    void fitStatus() {
+        int w = status.getWidth() - status.getTotalPaddingLeft() - status.getTotalPaddingRight(), room = status.getHeight();
+        int n = statusLines.size();
+        while (n > 1 && w > 0 && room > 0 && textHeight(newest(n), w) > room) n--;
+        String t = newest(n);
+        if (!t.contentEquals(status.getText())) status.setText(t);
+    }
+
+    String newest(int n) {
+        return String.join("\n", statusLines.subList(statusLines.size() - n, statusLines.size()));
+    }
+
+    int textHeight(String t, int w) {
+        return android.text.StaticLayout.Builder.obtain(t, 0, t.length(), status.getPaint(), w)
+                .setLineSpacing(status.getLineSpacingExtra(), status.getLineSpacingMultiplier())
+                .setIncludePad(status.getIncludeFontPadding()).build().getHeight();
     }
 
     // ------------------------------------------------------------------------------------------- helpers
