@@ -14,6 +14,7 @@ import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.text.format.Formatter;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -34,6 +35,7 @@ import org.lumen.installer.core.ActionGate;
 import org.lumen.installer.core.Engine;
 import org.lumen.installer.core.Host;
 import org.lumen.installer.core.ImageSource;
+import org.lumen.installer.core.InstallStep;
 import org.lumen.installer.core.Msg;
 import org.lumen.installer.core.ReleaseChannel;
 import org.lumen.installer.core.StepStatus;
@@ -70,6 +72,8 @@ public class MainActivity extends Activity {
     ImageView[] stepMark = new ImageView[5];
     TextView[] stepName = new TextView[5], stepInfo = new TextView[5];
     ProgressBar bar;
+    /** under the bar while a download runs: its speed and the time left */
+    TextView rate;
     LinearLayout buttons, options, version;
     String buttonKey = "", optionsKey = "";
     int seenSeq = -1;
@@ -196,6 +200,9 @@ public class MainActivity extends Activity {
         bar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Look.CARD2));
         bar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Look.ACC));
         right.addView(bar, lp(0, dp(16), 0, 0));
+        rate = text("", 12, DIM);
+        rate.setVisibility(View.GONE);
+        right.addView(rate, lp(0, dp(6), 0, 0));
         // the technical log is not shown here (plain words only): About shows its last lines under "Details for help"
         // as tall as its rows (no empty block under them), at most the room left under the steps card
         side.addView(versionsCard(), lp(0, dp(12), 0, 0));
@@ -311,8 +318,22 @@ public class MainActivity extends Activity {
             bar.setIndeterminate(false);
             bar.setProgress(0);
         }
+        renderRate(s);
         renderVersions(d);
         renderButtons(s);
+    }
+
+    /** While the image or an app update downloads: the speed of the last seconds and about how many minutes are left
+     *  (the updater's texts), the line kept free until the first speed is known so the card does not jump. */
+    void renderRate(Snap s) {
+        int dl = InstallStep.DOWNLOAD.ordinal();
+        boolean running = s.busy && s.curStep == dl && s.steps[dl] == StepStatus.RUNNING && s.total > 0;
+        long sp = s.speed, left = s.total - s.done;
+        rate.setVisibility(!running ? View.GONE : sp > 0 && left > 0 ? View.VISIBLE : View.INVISIBLE);
+        if (!running || sp <= 0 || left <= 0) return;
+        int min = (int) Math.max(1, left / sp / 60);
+        rate.setText(getString(R.string.dl_rate, Formatter.formatShortFileSize(this, sp),
+                getResources().getQuantityString(R.plurals.dl_eta, min, min)));
     }
 
     void renderButtons(Snap s) {

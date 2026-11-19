@@ -1,6 +1,8 @@
 package org.lumen.installer.core;
 
 import org.lumen.about.XgimiFacts;
+import org.lumen.download.HttpError;
+import org.lumen.download.ParallelDownload;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -54,6 +56,8 @@ public final class Engine {
         void step(InstallStep s, StepStatus st);
         void message(Msg m, String... args);
         void progress(InstallStep s, long done, long total);
+        /** a download: also its speed over the last seconds (bytes/s, 0 = not known yet), for the time left */
+        default void progress(InstallStep s, long done, long total, long speed) { progress(s, done, total); }
         void log(String line);
     }
 
@@ -76,6 +80,8 @@ public final class Engine {
         public long marginBytes = 512L << 20;
         public int retries = 5;
         public long retryDelayMs = 2000;
+        /** the image and app update downloads: several range connections (apps/core/lumen-download) */
+        public ParallelDownload.Tuning download = ParallelDownload.Tuning.DEFAULT;
         public long rootTimeoutMs = 45 * 60 * 1000L;
         public long probeTimeoutMs = 3 * 60 * 1000L;
         /** how long the restart request may take, and then the projector's going down: still running = no restart */
@@ -130,6 +136,7 @@ public final class Engine {
     private final Config cfg;
     private final Listener l;
     private final Http http;
+    private final ParallelDownload downloader;
     private volatile boolean stop;
 
     public Detection det;
@@ -153,6 +160,11 @@ public final class Engine {
         this.cfg = cfg;
         this.l = l;
         this.http = new Http(cfg.allowLocalHttp);
+        this.downloader = new ParallelDownload(http, r -> {
+            Thread t = new Thread(r, "lumen-download");
+            t.setDaemon(true);
+            return t;
+        }, cfg.download, l::log);
         this.dir = host.workDir();
         loadState();
     }
@@ -222,10 +234,10 @@ public final class Engine {
     private void set(String k, String v) { st.setProperty(k, v == null ? "" : v); }
 
     private void forgetImage() {
-        if (imageIsDownload()) imageFile().delete();   // a file of the user's stick folder is never deleted
-        internalImage().delete();
+        if (imageIsDownload()) ParallelDownload.discard(imageFile());   // a file of the user's stick folder is never deleted
+        ParallelDownload.discard(internalImage());   // with a partial download (image.img.part and its ranges)
         tailFile().delete();
-        for (String k : new String[] { "image.name", "image.sha", "image.size", "image.url", "image.etag", "image.verified",
+        for (String k : new String[] { "image.name", "image.sha", "image.size", "image.url", "image.verified",
                 "image.mtime", "image.install", "image.clears", "image.path", "image.from", "tail.sha", "tail.size", "total", "version",
                 "model" }) st.remove(k);
         saveState();
@@ -602,7 +614,7 @@ public final class Engine {
         // downloaded, and a margin. A stick folder costs no /data space for the image itself.
         long tail = tailEstimate(imageSize);
         boolean download = kit == null;
-        long have = download && imageFile().exists() ? Math.min(imageFile().length(), imageSize) : 0;
+        long have = download ? ParallelDownload.have(imageFile(), imageSize) : 0;
         needSystem = imageSize + tail;
         needUserdata = cfg.userdataBytes;
         needReserve = virtualAb ? superBytes : 0;
@@ -703,7 +715,7 @@ public final class Engine {
             l.step(InstallStep.DOWNLOAD, StepStatus.DONE);
             return true;
         }
-        long have = f.exists() ? f.length() : 0;
+        long have = ParallelDownload.have(f, imageSize);
         // the download and the tail need room in the app's dir on /data
         long rest = imageSize - Math.min(have, imageSize);
         if (host.freeBytes(dir) - rest - tailEstimate(imageSize) < 0) {
@@ -711,7 +723,7 @@ public final class Engine {
         }
         String last;
         try {
-            last = fetch(InstallStep.DOWNLOAD, imageUrl, f, imageSize, "image.etag");
+            last = fetch(InstallStep.DOWNLOAD, imageUrl, f, imageSize, imageSha);
         } catch (Bytes.Stopped e) {
             return stopped(InstallStep.DOWNLOAD);
         }
@@ -721,30 +733,28 @@ public final class Engine {
         return true;
     }
 
-    /** Download url into f (size bytes), resumable (Range + If-Range with the ETag kept under etagKey), with the
-     *  config's retries. null = done, else the last error. Bytes.Stopped = paused (what came is kept). */
-    private String fetch(InstallStep s, String url, File f, long size, String etagKey) throws Bytes.Stopped {
+    /** Download url into f (size bytes) over several range connections at once (apps/core/lumen-download: providers
+     *  shape GitHub per connection), every range resumable after a pause, a failure or a restart of the app (f.part
+     *  and its ranges, bound to sha256), with the config's retries. Checking the file stays with the verify step.
+     *  null = done, else the last error. Bytes.Stopped = paused (what came is kept). */
+    private String fetch(InstallStep s, String url, File f, long size, String sha256) throws Bytes.Stopped {
         String last = "";
         for (int attempt = 0; attempt <= cfg.retries; attempt++) {
             if (stop) throw new Bytes.Stopped();
             try {
-                http.lastEtag = "";
-                String tag = http.download(url, f, size, state(etagKey), new Http.Progress() {
-                    @Override public void at(long done, long total) { l.progress(s, done, total); }
-                }, stopper);
-                set(etagKey, tag);
-                saveState();
+                downloader.run(url, f, size, sha256, (done, total, speed) -> {
+                    l.progress(s, done, total, speed);
+                    return !stop;
+                });
                 if (f.length() != size) throw new IOException("size " + f.length());
                 return null;
-            } catch (Bytes.Stopped e) {
-                if (!http.lastEtag.isEmpty()) { set(etagKey, http.lastEtag); saveState(); }
-                throw e;
+            } catch (ParallelDownload.Stopped e) {
+                throw new Bytes.Stopped();
             } catch (IOException e) {
-                if (!http.lastEtag.isEmpty()) { set(etagKey, http.lastEtag); saveState(); }
                 last = e.getMessage() == null ? e.toString() : e.getMessage();
-                l.log("download: " + last + " (" + (f.exists() ? f.length() : 0) + " of " + size + " bytes kept)");
-                if (e instanceof Http.HttpException) {
-                    int c = ((Http.HttpException) e).code;
+                l.log("download: " + last + " (" + ParallelDownload.have(f, size) + " of " + size + " bytes kept)");
+                if (e instanceof HttpError) {
+                    int c = ((HttpError) e).code;
                     if (c >= 400 && c < 500 && c != 408 && c != 429) break;
                 }
                 sleep(cfg.retryDelayMs * (1L << Math.min(attempt, 4)));
@@ -1181,14 +1191,13 @@ public final class Engine {
         l.step(InstallStep.DOWNLOAD, StepStatus.RUNNING);
         File f = appApk();
         if (!u.sha256.equals(state("app.sha"))) {   // another file than the one a pause kept
-            f.delete();
-            st.remove("app.etag");
+            ParallelDownload.discard(f);
             set("app.sha", u.sha256);
             saveState();
         }
         String last;
         try {
-            last = fetch(InstallStep.DOWNLOAD, u.apk, f, u.size, "app.etag");
+            last = fetch(InstallStep.DOWNLOAD, u.apk, f, u.size, u.sha256);
         } catch (Bytes.Stopped e) {
             return stopped(InstallStep.DOWNLOAD);
         }

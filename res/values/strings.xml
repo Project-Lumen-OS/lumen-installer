@@ -179,4 +179,10 @@
     <string name="msg_dump_sent">Sent. Your code is %1$s. Tell it to us if you write to us.</string>
     <string name="msg_dump_failed">Not sent (%1$s). Nothing changed. Try again later.</string>
     <string name="msg_dump_paused">Not sent yet (%1$s). Press Send info again and it goes on from where it stopped.</string>
+    <!-- the download's speed and the time left under the progress bar (the texts of the Lumen OS updater) -->
+    <string name="dl_rate">%1$s/s · %2$s</string>
+    <plurals name="dl_eta">
+        <item quantity="one">About %d minute left</item>
+        <item quantity="other">About %d minutes left</item>
+    </plurals>
 </resources>

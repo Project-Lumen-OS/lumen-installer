@@ -173,4 +173,12 @@
     <string name="msg_dump_sent">Отправлено. Ваш код %1$s. Назовите его, если будете нам писать.</string>
     <string name="msg_dump_failed">Не отправлено (%1$s). Ничего не изменилось. Попробуйте позже.</string>
     <string name="msg_dump_paused">Пока не отправлено (%1$s). Нажмите «Отправить сведения» ещё раз, отправка продолжится с того же места.</string>
+    <!-- the download's speed and the time left under the progress bar (the texts of the Lumen OS updater) -->
+    <string name="dl_rate">%1$s/с · %2$s</string>
+    <plurals name="dl_eta">
+        <item quantity="one">Осталось около %d минуты</item>
+        <item quantity="few">Осталось около %d минут</item>
+        <item quantity="many">Осталось около %d минут</item>
+        <item quantity="other">Осталось около %d минуты</item>
+    </plurals>
 </resources>

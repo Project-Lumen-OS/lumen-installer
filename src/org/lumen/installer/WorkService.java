@@ -62,7 +62,8 @@ public class WorkService extends Service {
             engine = new Engine(new AndroidHost(app), cfg, new Engine.Listener() {
                 @Override public void step(InstallStep s, StepStatus st) { Snap.I.step(s, st); }
                 @Override public void message(Msg m, String... args) { Snap.I.message(m, args); }
-                @Override public void progress(InstallStep s, long d, long t) { Snap.I.progress(s, d, t); }
+                @Override public void progress(InstallStep s, long d, long t) { Snap.I.progress(s, d, t, 0); }
+                @Override public void progress(InstallStep s, long d, long t, long speed) { Snap.I.progress(s, d, t, speed); }
                 @Override public void log(String line) { Snap.I.log(line); }
             });
         }

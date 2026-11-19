@@ -32,6 +32,8 @@ final class Snap {
     final StepStatus[] steps = new StepStatus[InstallStep.values().length];
     volatile int curStep = -1;
     volatile long done, total;
+    /** the download's speed over the last seconds, bytes/s (0: not known, or not a download) */
+    volatile long speed;
     volatile Line last;
     final List<Line> lines = new ArrayList<>();
     final List<String> log = new ArrayList<>();
@@ -57,7 +59,7 @@ final class Snap {
     synchronized void resetSteps() {
         for (int i = 0; i < steps.length; i++) steps[i] = StepStatus.WAITING;
         curStep = -1;
-        done = total = 0;
+        done = total = speed = 0;
         lines.clear();
         last = null;
         seq++;
@@ -66,15 +68,16 @@ final class Snap {
     synchronized void step(InstallStep s, StepStatus st) {
         steps[s.ordinal()] = st;
         curStep = s.ordinal();
-        if (st != StepStatus.RUNNING) { done = 0; total = 0; }
+        if (st != StepStatus.RUNNING) { done = 0; total = 0; speed = 0; }
         seq++;
     }
 
-    /** s null: work outside the five steps (the USB stick copy), the bar alone shows it */
-    synchronized void progress(InstallStep s, long d, long t) {
+    /** s null: work outside the five steps (the USB stick copy), the bar alone shows it. sp: a download's speed. */
+    synchronized void progress(InstallStep s, long d, long t, long sp) {
         if (s != null) curStep = s.ordinal();
         done = d;
         total = t;
+        speed = sp;
         seq++;
     }
 
