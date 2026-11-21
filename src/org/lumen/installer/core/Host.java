@@ -74,4 +74,8 @@ public interface Host {
 
     /** The kernel release of the running system (uname), "" when unknown. */
     default String kernel() { return ""; }
+
+    /** The light engine line of the projector HAL (getDlpImageVersion: the FPGA and DLP controller firmware), as an
+     *  ordinary app may ask it on the XGIMI system; null when the HAL is not there or does not answer. */
+    default String dlpImageVersion() { return null; }
 }

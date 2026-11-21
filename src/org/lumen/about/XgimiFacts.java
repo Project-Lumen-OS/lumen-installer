@@ -3,6 +3,7 @@ package org.lumen.about;
 
 import java.util.Locale;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -67,6 +68,13 @@ public final class XgimiFacts {
 
     /** The same with the kernel release (uname) of the running system. */
     public static XgimiFacts read(Function<String, String> props, Function<String, String> file, String kernel) {
+        return read(props, file, kernel, () -> null);
+    }
+
+    /** The same with the HAL's light engine line (the FPGA firmware), asked only when the model's config names an
+     *  FPGA; dlpImage gives null when it cannot be read. */
+    public static XgimiFacts read(Function<String, String> props, Function<String, String> file, String kernel,
+                                  Supplier<String> dlpImage) {
         String m = model(props);
         boolean xgimi = xgimiSystem(props);
         String fw = firmware(props.apply(FIRMWARE_PROP));
@@ -74,6 +82,7 @@ public final class XgimiFacts {
         if (fw.isEmpty() && xgimi) fw = firmware(props.apply(SYSTEM_FIRMWARE_PROP));
         if (m.isEmpty()) return new XgimiFacts(m, fw, "");
         LightEngine le = LightEngine.parse(file.apply(CONFIG_ROOT + m + DLP_INI), file.apply(CONFIG_ROOT + m + DLP_FLASH_INI));
+        if (!le.fpga.isEmpty()) le = le.withFpgaFirmware(dlpImage.get());
         String ini = file.apply(CONFIG_ROOT + m + "/" + SYSTEM_INI);
         FirmwareParts parts = FirmwareParts.parse(props, file.apply(PLATFORM_FILE), kernel, xgimi);
         return new XgimiFacts(m, fw, ini == null ? "" : updateBinName(ini), le, parts);

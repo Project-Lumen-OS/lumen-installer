@@ -55,7 +55,7 @@ public final class AboutRows {
         if (!p.platform.isEmpty()) rows.add(row(KEY_PLATFORM, texts.apply(RowText.PLATFORM), p.platform));
         LightEngine le = f.engine;
         if (!le.controller.isEmpty()) rows.add(row(KEY_DLP, texts.apply(RowText.DLP), part(texts, le.controller, le.firmware)));
-        if (!le.fpga.isEmpty()) rows.add(row(KEY_FPGA, texts.apply(RowText.FPGA), le.fpga));
+        if (!le.fpga.isEmpty()) rows.add(row(KEY_FPGA, texts.apply(RowText.FPGA), part(texts, le.fpga, le.fpgaFirmware)));
         if (!p.remote.isEmpty()) rows.add(row(KEY_REMOTE, texts.apply(RowText.REMOTE), part(texts, p.remote, p.remoteFirmware)));
         if (!p.wifi.isEmpty()) rows.add(row(KEY_WIFI, texts.apply(RowText.WIFI), part(texts, p.wifi, p.wifiFirmware)));
         return rows;

@@ -91,7 +91,7 @@ public final class Engine {
         /** the stock system info: our report server's addresses (tried in order) when the signed catalog names none,
          *  how long the root part may run, the free space it needs on /data (the root texts and the zip), how long a
          *  zip that did not go out is kept to go on with (the server keeps an unfinished upload a day) */
-        public List<String> dumpUrls = Arrays.asList(org.lumen.report.ReportUrl.CLOUDFLARE);
+        public List<String> dumpUrls = org.lumen.report.ReportUrl.DEFAULTS;
         public long dumpTimeoutMs = 20 * 60 * 1000L;
         public long dumpSpaceBytes = 600L << 20;
         public long dumpKeepMs = 20 * 3600 * 1000L;
@@ -361,7 +361,7 @@ public final class Engine {
         if (d.code.isEmpty()) d.code = Props.get(p, "ro.xgimi.modelname");
         d.board = Props.get(p, "ro.boot.hardware");
         d.stock = Props.get(p, "ro.vendor.build.version.incremental");
-        d.facts = XgimiFacts.read(k -> Props.get(p, k), host::file, host.kernel());
+        d.facts = XgimiFacts.read(k -> Props.get(p, k), host::file, host.kernel(), host::dlpImageVersion);
         Catalog cat = currentCatalog();
         d.catalogSerial = cat == null ? 0 : cat.serial;
         d.model = cat == null ? null : cat.find(d.code);

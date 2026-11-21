@@ -11,6 +11,9 @@ import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Environment;
+import android.os.IBinder;
+import android.os.Parcel;
+import android.os.RemoteException;
 import android.os.StatFs;
 import android.system.Os;
 
@@ -30,8 +33,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The projector side of the engine on a real stock unit.
@@ -82,6 +88,49 @@ final class AndroidHost implements Host {
             return Os.uname().release;
         } catch (RuntimeException e) {
             return "";
+        }
+    }
+
+    /** The XGIMI projector HAL's display service: its light engine line comes from one getter, nothing else is called. */
+    static final String DISPLAY_HAL = "xgimi.hardware.gmpf.IDisplayManager";
+    private static final long HAL_WAIT_MS = 1500;
+    private static String dlpImage;
+    private static boolean dlpImageRead;
+
+    /** Asked once per start of the app (the line changes only with a firmware update, which restarts the projector),
+     *  at most HAL_WAIT_MS: a HAL that does not answer leaves the row without a firmware. */
+    @Override public synchronized String dlpImageVersion() {
+        if (dlpImageRead) return dlpImage;
+        dlpImageRead = true;
+        FutureTask<String> ask = new FutureTask<>(AndroidHost::askDlpImage);
+        Thread t = new Thread(ask, "lumen-dlp-image");
+        t.setDaemon(true);
+        t.start();
+        try {
+            dlpImage = ask.get(HAL_WAIT_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException | TimeoutException e) {
+            dlpImage = null;
+        }
+        return dlpImage;
+    }
+
+    private static String askDlpImage() {
+        Parcel data = Parcel.obtain(), reply = Parcel.obtain();
+        try {
+            IBinder b = (IBinder) Class.forName("android.os.ServiceManager").getMethod("checkService", String.class)
+                    .invoke(null, DISPLAY_HAL + "/default");
+            if (b == null || !DISPLAY_HAL.equals(b.getInterfaceDescriptor())) return null;
+            data.writeInterfaceToken(DISPLAY_HAL);
+            if (!b.transact(HalCodes.DM_GET_DLP_IMAGE_VERSION, data, reply, 0)) return null;
+            reply.readException();
+            return reply.readString();
+        } catch (ReflectiveOperationException | RemoteException | RuntimeException e) {
+            return null;
+        } finally {
+            data.recycle();
+            reply.recycle();
         }
     }
 

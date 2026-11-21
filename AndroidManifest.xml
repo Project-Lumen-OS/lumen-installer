@@ -12,11 +12,12 @@
   1.0.6: on an installed Lumen OS it may update one of its apps that the signed list names for that Lumen OS version
   (REQUEST_INSTALL_PACKAGES: the system installer asks the user, the app never installs anything by itself).
   1.0.7: images and app updates download over several connections at once and go on after a break.
+  1.0.8: the firmware card shows the FPGA firmware next to its type, problem reports try the new server address first.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.lumen.installer"
-    android:versionCode="107"
-    android:versionName="1.0.7">
+    android:versionCode="108"
+    android:versionName="1.0.8">
 
     <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="29" />
 
