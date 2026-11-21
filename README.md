@@ -1,20 +1,22 @@
 # Lumen Installer
 
 An app for XGIMI projectors that brings [Lumen OS](https://github.com/Project-Lumen-OS/lumen-os) to the projector
-without a computer. It reads the projector's model and looks it up in the signed list of Lumen OS builds. If a build
+over the network, without a computer and without a USB cable. It reads the projector's model and looks it up in the signed list of Lumen OS builds. If a build
 for that model is published, the app offers it: the stable version, or the newest beta if you choose Beta. Every file is checked against its signature on the
 projector before it is used. You can try Lumen OS first: the XGIMI system and your files stay as they are.
+
+Lumen OS always downloads over the projector's own internet connection, Wi-Fi or Ethernet. This app is the only
+way to install it. The XGIMI Play 6 is the one exception: it still installs with a computer, see its
+[guide](https://github.com/Project-Lumen-OS/lumen-os/blob/main/docs/install/play6/en.md).
 
 [Русская версия](README.ru.md)
 
 ## Install the app
 
 1. Download the Lumen Installer file that ends in `.apk1` from the [latest release](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest)
-   and copy it to a USB stick (FAT32 or exFAT).
+   and copy it to a USB stick (FAT32 or exFAT). The stick only carries the app.
 2. Plug the stick into the projector, open the file in the XGIMI file manager and confirm.
-   Or with a computer: turn on debugging on the projector, then `adb connect <projector IP>:5555` and
-   `adb install -r` with the `.apk` file from the same release.
-3. Open Lumen Installer on the projector and follow the screen.
+3. Connect the projector to the internet, open Lumen Installer and follow the screen.
 
 The app updates over any earlier Lumen Installer. Which projectors and firmware versions get Lumen OS is decided by
 the signed list of builds on the [index release](https://github.com/Project-Lumen-OS/lumen-installer/releases/tag/index),
