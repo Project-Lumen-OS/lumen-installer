@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Sparks card (contrib/on/ContribCard.java), in every build unless the switch LI_CONTRIB=0. -->
+<resources>
+    <string name="sparks_send_info">This firmware is not in the Lumen base yet. Send the system info and get a Spark</string>
+    <string name="sparks_code">Your Spark. Scan the code with your phone or enter it in the bot @Lumen_OS_Bot</string>
+    <string name="sparks_waiting">The Spark arrives after a check</string>
+    <string name="sparks_installed_before">Lumen OS was installed on this projector before, so the install earns no Spark</string>
+</resources>

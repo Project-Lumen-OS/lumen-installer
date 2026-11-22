@@ -12,7 +12,6 @@ import android.os.PowerManager;
 
 import org.lumen.installer.core.Bytes;
 import org.lumen.installer.core.Engine;
-import org.lumen.installer.core.ImageSource;
 import org.lumen.installer.core.InstallStep;
 import org.lumen.installer.core.Msg;
 import org.lumen.installer.core.Release;
@@ -126,7 +125,7 @@ public class WorkService extends Service {
             e.resetStop();
             Snap.I.det = e.detect();
             if (t == Task.CATALOG) {
-                if (e.source() == ImageSource.NET) e.refreshCatalog();
+                e.refreshCatalog();
                 Snap.I.det = e.detect();
             } else if (t == Task.PREPARE) {
                 Snap.I.resetSteps();
@@ -158,7 +157,6 @@ public class WorkService extends Service {
             Snap.I.trialOnly = e.trialOnly();
             Snap.I.need = e.state("need.bytes");
             Snap.I.free = e.state("free.bytes");
-            Snap.I.source = e.source();
             Snap.I.channel = e.channel();
             if (Snap.I.prepared) Snap.I.handover = e.handover();
         } catch (RuntimeException ex) {

@@ -46,7 +46,7 @@ public class AboutActivity extends Activity {
         try { app = getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception ignored) { /* stays unknown */ }
         String lumen = null;
         for (Snap.Line l : s.messages())
-            if ((l.msg == Msg.RELEASE_FOUND || l.msg == Msg.STICK_FOUND) && l.args != null && l.args.length > 0) lumen = l.args[0];
+            if (l.msg == Msg.RELEASE_FOUND && l.args != null && l.args.length > 0) lumen = l.args[0];
         card(R.string.about_device_title,
                 getString(R.string.about_device, d == null || d.name.isEmpty() ? unknown : d.name, d == null || d.code.isEmpty() ? "?" : d.code),
                 getString(R.string.about_stock, d == null || d.stock.isEmpty() ? unknown : d.stock),

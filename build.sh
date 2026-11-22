@@ -8,6 +8,8 @@
 # other. LI_KEY_DIR (default ~/.lumen-keys/installer) holds installerkey.pk8 + installerkey.x509.pem; a key whose
 # certificate is not the published one stops the build (another key cannot update installed copies). LI_ANY_KEY=1
 # builds with any key (your own test build; it will not update an installed official copy).
+# The Sparks card is in every build. LI_CONTRIB=0 builds without it (contrib-off.layers): nothing is asked or sent.
+# LI_VERSION_CODE / LI_VERSION_NAME set the version of the staged manifest (a test build), never in git.
 # minSdk 29 / targetSdk 29: legacy storage, so a LumenOS folder at the root of a USB stick is readable with the
 # storage permission.
 set -eu
@@ -46,13 +48,22 @@ if [ -f "$HERE/app.layers" ]; then
   # the Lumen OS source tree: the app and the shared source modules its app.layers names, assembled by
   # tools/devices/assemble_app.py (the public repository has those modules in src/ already)
   GSI=$(cd "$HERE/../.." && pwd)
-  python3 -B "$GSI/tools/devices/assemble_app.py" --quiet "$HERE/app.layers" --out "$ST" \
-    || { echo "build.sh: app.layers does not assemble" >&2; exit 1; }
+  RECIPE=$HERE/app.layers
+  if [ "${LI_CONTRIB:-1}" = 0 ]; then
+    RECIPE=$HERE/contrib-build.layers
+    { grep -v -E '^module +lumen-qr$|contrib/on/|core/lumen-contrib/' "$HERE/app.layers"; cat "$HERE/contrib-off.layers"; } > "$RECIPE"
+  fi
+  python3 -B "$GSI/tools/devices/assemble_app.py" --quiet "$RECIPE" --out "$ST" \
+    || { echo "build.sh: $(basename "$RECIPE") does not assemble" >&2; rm -f "$HERE/contrib-build.layers"; exit 1; }
+  rm -f "$HERE/contrib-build.layers"
 else
   mkdir -p "$ST"
   for f in AndroidManifest.xml res src assets; do cp -R "$HERE/$f" "$ST/"; done
   [ ! -f "$HERE/R_EXTRA_PACKAGES" ] || cp "$HERE/R_EXTRA_PACKAGES" "$ST/"
 fi
+if [ -n "${LI_VERSION_CODE:-}" ]; then sed -i.bak "s/android:versionCode=\"[0-9]*\"/android:versionCode=\"$LI_VERSION_CODE\"/" "$ST/AndroidManifest.xml"; fi
+if [ -n "${LI_VERSION_NAME:-}" ]; then sed -i.bak "s/android:versionName=\"[^\"]*\"/android:versionName=\"$LI_VERSION_NAME\"/" "$ST/AndroidManifest.xml"; fi
+rm -f "$ST/AndroidManifest.xml.bak"
 mkdir -p "$ST/assets/fonts"
 cp "$FD/Onest-Variable.ttf" "$FD/OFL-Onest.txt" "$ST/assets/fonts/"
 KEY_PK8=$K/installerkey.pk8 KEY_PEM=$K/installerkey.x509.pem MIN_SDK=29 TARGET_SDK=29 BUILD_DIR=$HERE/build/out \

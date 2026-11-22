@@ -134,54 +134,6 @@ final class AndroidHost implements Host {
         }
     }
 
-    /** USB sticks: every removable volume of getExternalFilesDirs (which also creates the app's own folder on it). */
-    @Override public List<Volume> volumes() {
-        List<Volume> out = new ArrayList<>();
-        File[] dirs;
-        try {
-            dirs = c.getExternalFilesDirs(null);
-        } catch (RuntimeException e) {
-            return out;
-        }
-        for (File d : dirs) {
-            if (d == null) continue;
-            try {
-                if (!Environment.isExternalStorageRemovable(d)) continue;   // the built-in shared storage
-            } catch (IllegalArgumentException e) {
-                continue;
-            }
-            String p = d.getAbsolutePath();
-            int i = p.indexOf("/Android/data/");
-            if (i <= 0) continue;
-            out.add(new Volume(new File(p.substring(0, i)), d));
-        }
-        // the built-in shared storage last: a LumenOS folder copied there (adb push to
-        // /sdcard/LumenOS, or a file manager); the same checks as a stick, root reads it under /data/media/<user>
-        try {
-            File own = c.getExternalFilesDir(null);
-            File top = Environment.getExternalStorageDirectory();
-            if (own != null && top != null && Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) out.add(new Volume(top, own, false));
-        } catch (RuntimeException ignored) {
-            // no shared storage: sticks only
-        }
-        return out;
-    }
-
-    /** Where a LumenOS folder may be: the sticks, then the built-in shared storage (/sdcard/LumenOS, e.g. an adb push
-     *  or a file manager copy). The same checks as a stick; root reads it under /data/media/&lt;user&gt;. Never a place for
-     *  "keep the download on the stick": that is /data itself. */
-    @Override public List<Volume> kitVolumes() {
-        List<Volume> out = volumes();
-        try {
-            File own = c.getExternalFilesDir(null);
-            File top = Environment.getExternalStorageDirectory();
-            if (own != null && top != null && Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) out.add(new Volume(top, own, false));
-        } catch (RuntimeException ignored) {
-            // no shared storage: sticks only
-        }
-        return out;
-    }
-
     /** What an ordinary app reads without root, for the stock system info (the root part is the script's dump job). */
     @Override public List<String[]> facts() {
         List<String[]> out = new ArrayList<>();
@@ -258,10 +210,6 @@ final class AndroidHost implements Host {
         } catch (RuntimeException e) {
             return "";
         }
-    }
-
-    @Override public boolean canReadSticks() {
-        return c.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
     }
 
     @Override public long freeBytes(File dir) {

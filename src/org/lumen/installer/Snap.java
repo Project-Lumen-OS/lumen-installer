@@ -2,7 +2,6 @@ package org.lumen.installer;
 
 import org.lumen.installer.core.ActionGate;
 import org.lumen.installer.core.Engine;
-import org.lumen.installer.core.ImageSource;
 import org.lumen.installer.core.InstallStep;
 import org.lumen.installer.core.Msg;
 import org.lumen.installer.core.ReleaseChannel;
@@ -42,9 +41,7 @@ final class Snap {
     volatile TrialState trial = TrialState.NONE;
     volatile Engine.Detection det;
     volatile String need = "", free = "";
-    /** the image source (download or a LumenOS folder on a USB stick) */
-    volatile ImageSource source = ImageSource.NET;
-    /** Version: Stable or Beta (download source, a model with a stable and a beta build) */
+    /** Version: Stable or Beta (a model with a stable and a beta build) */
     volatile ReleaseChannel channel = ReleaseChannel.STABLE;
     /** the catalog was asked for once since the app started */
     volatile boolean catalogTried;

@@ -7,9 +7,7 @@ import java.security.Signature;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * The signed release files, checked on the projector with the certificates of the model's catalog entry:
@@ -64,21 +62,6 @@ public final class Release {
     static final String VERSION = "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}(?:-(?:beta|rc)[0-9]{1,2})?";
 
     static boolean versionOk(String v) { return v != null && v.matches(VERSION); }
-
-    /** Every file a signed SHA256SUMS lists (name -> sha256), for a USB stick folder; a malformed line refuses it. */
-    public static Map<String, String> listed(byte[] sums, byte[] sig, List<X509Certificate> certs) throws Bad {
-        if (!verify(sums, sig, certs)) throw new Bad(Msg.SUMS_BAD_SIG, null);
-        Map<String, String> out = new LinkedHashMap<>();
-        for (String line : Bytes.utf8(sums).split("\n")) {
-            line = line.trim();
-            if (line.isEmpty()) continue;
-            String[] f = line.split("\\s+", 2);
-            if (f.length != 2 || !f[0].matches("[0-9a-f]{64}")) throw new Bad(Msg.SUMS_NO_IMAGE, line);
-            String n = f[1].startsWith("*") ? f[1].substring(1) : f[1];
-            if (out.put(n, f[0]) != null) throw new Bad(Msg.SUMS_NO_IMAGE, n + " (listed twice)");
-        }
-        return out;
-    }
 
     /** The sha256 that the signed SHA256SUMS gives for exactly this file name. */
     public static String imageSha(byte[] sums, byte[] sig, List<X509Certificate> certs, String name) throws Bad {

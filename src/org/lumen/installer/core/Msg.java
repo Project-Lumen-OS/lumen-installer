@@ -7,7 +7,7 @@ package org.lumen.installer.core;
  */
 public enum Msg {
     // detection (no root, no network): the projector's props against its entry of the signed catalog of builds
-    SUPPORTED(0), NO_BUILD(2), COMPUTER_ONLY(2), BOARD_MISMATCH(2), ALREADY_LUMEN(1), IN_TRIAL(0),
+    SUPPORTED(0), NO_BUILD(2), BOARD_MISMATCH(2), ALREADY_LUMEN(1), IN_TRIAL(0),
     NOT_ORANGE(1), STOCK_UNSUPPORTED(2), MODEL_STOCK_UNSUPPORTED(3),
     // the user ticked "start the trial anyway" on a stock version the catalog does not list (stock, build version)
     FORCED(2),
@@ -28,15 +28,12 @@ public enum Msg {
     ROOT_UNAVAILABLE(0), ROOT_TIMEOUT(0), ROOT_FAILED(1), NO_TRIAL_TOOL(0), OTA_PENDING(0), TRIAL_INSTALLED(1),
     TRIAL_INSTALLED_OTHER(0), CHECK_OK(1),
     // what a finished XGIMI update left (StockUpdate): cleared by this build's install / this build does not clear
-    // them (the trial only, the computer installer keeps it) / unusual, the stick (MB)
+    // them (the trial only) / unusual, the XGIMI recovery stick first (MB)
     CHECK_OK_LEFTOVERS(2), CHECK_OK_LEFTOVERS_KEPT(2), LEFTOVERS_STICK(1),
     // the build (network): its signed SHA256SUMS and the file on the server against the catalog
     NET_FAILED(1), SUMS_BAD_SIG(0), SUMS_NO_IMAGE(1), CATALOG_MISMATCH(1), IMAGE_SIZE_BAD(1), RELEASE_FOUND(2),
     // space: what the projector's memory must hold (need, free, trial system, trial data, reserve, download, margin)
     NO_SPACE(2), SPACE_PLAN(7),
-    // USB stick (a folder with a build's image + SHA256SUMS + SHA256SUMS.sig, Engine.KIT_DIR)
-    STICK_NOT_FOUND(0), STICK_NO_ACCESS(0), STICK_FOUND(3), STICK_NO_IMAGE(1), STICK_NOT_LISTED(0), STICK_ROOT_UNREADABLE(1),
-    FROM_STICK(1),
     // download / verify / prepare
     DOWNLOAD_INTERRUPTED(1), DOWNLOADED(1), SHA_MISMATCH(0), VERIFIED(0), HANDOVER_YES(0), HANDOVER_NO(1),
     PREPARED(0), PREPARE_FAILED(1),

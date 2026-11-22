@@ -2,22 +2,22 @@
 <!--
   org.lumen.installer ("Lumen Installer"): runs on the projector's own XGIMI firmware and starts Lumen OS once as a
   trial, without a computer. It knows no model: it reads the projector's model code, finds it in the signed list of
-  projectors (devices.json on the release "index" of Project-Lumen-OS/lumen-installer, or in a LumenOS folder) and
+  projectors (devices.json on the release "index" of Project-Lumen-OS/lumen-installer) and
   follows that entry: which release channel, which certificates, what may run on this firmware. It downloads the
   latest signed release for exactly that model, verifies it on the projector and hands it to the system's trial tool
   through XGIMI's service access. An ordinary third-party app: no sharedUserId, no platform privileges, its own key.
-  minSdk 29, targetSdk 29: with requestLegacyExternalStorage the storage permission lets it read a LumenOS folder at
-  the root of a USB stick (the release files, verified like a download); the app's own folder on the stick (a download
-  kept there) needs no permission.
+  minSdk 29, targetSdk 29.
   1.0.6: on an installed Lumen OS it may update one of its apps that the signed list names for that Lumen OS version
   (REQUEST_INSTALL_PACKAGES: the system installer asks the user, the app never installs anything by itself).
   1.0.7: images and app updates download over several connections at once and go on after a break.
   1.0.8: the firmware card shows the FPGA firmware next to its type, problem reports try the new server address first.
+  1.0.9: Lumen OS comes over the network only: no USB stick or LumenOS folder and no storage permission, a model that
+  only a computer installs shows no build.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.lumen.installer"
-    android:versionCode="108"
-    android:versionName="1.0.8">
+    android:versionCode="109"
+    android:versionName="1.0.9">
 
     <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="29" />
 
@@ -27,7 +27,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
@@ -36,7 +35,6 @@
         android:banner="@drawable/banner_installer"
         android:allowBackup="false"
         android:largeHeap="true"
-        android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 

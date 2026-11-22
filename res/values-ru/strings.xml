@@ -22,7 +22,7 @@
     <string name="btn_restart">Перезапустить</string>
     <string name="btn_later">Позже</string>
     <string name="btn_replace">Поставить новую пробу</string>
-    <string name="confirm_replace_body">Старая проба удалится, новая Lumen OS из выбранного источника подготовится и запустится. Система XGIMI останется как есть.</string>
+    <string name="confirm_replace_body">Старая проба удалится, новая Lumen OS скачается, подготовится и запустится. Система XGIMI останется как есть.</string>
     <string name="btn_again">Запустить пробу снова</string>
     <string name="btn_remove">Удалить пробный запуск</string>
     <string name="btn_cancel">Отмена</string>
@@ -37,7 +37,7 @@
     <string name="confirm_start_title">Запустить Lumen OS на пробу?</string>
     <string name="confirm_start_body">Пробный запуск хранится в памяти проектора в виде файлов. Система XGIMI не меняется. После перезапуска Lumen OS запустится один раз. Следующий перезапуск вернёт систему XGIMI.</string>
     <string name="confirm_keep_yes">Чтобы оставить Lumen OS, выберите «Установить» внутри пробного запуска.</string>
-    <string name="confirm_keep_no">Эта версия Lumen OS пока не умеет устанавливаться из пробного запуска. Чтобы оставить её, воспользуйтесь установщиком для компьютера из инструкции.</string>
+    <string name="confirm_keep_no">Эту версию Lumen OS на этом проекторе пока можно только попробовать. Устанавливаться из пробного запуска она ещё не умеет.</string>
     <string name="confirm_remove_title">Удалить пробный запуск?</string>
     <string name="confirm_remove_body">Файлы пробного запуска удалятся, и место освободится. Система XGIMI не меняется.</string>
 
@@ -58,7 +58,7 @@
     <string name="msg_trial_installed">Пробный запуск Lumen OS %1$s уже готов на этом проекторе. Чтобы поставить новую версию, нажмите «Поставить новую пробу».</string>
     <string name="msg_trial_installed_other">На проекторе уже есть другая пробная система. Сначала удалите её.</string>
     <string name="msg_check_ok_leftovers">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть. Прошлое обновление XGIMI оставило в памяти проектора около %2$s МБ своих служебных файлов. Обычно установка убирает их сама, делать ничего не нужно.</string>
-    <string name="msg_check_ok_leftovers_kept">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть. Прошлое обновление XGIMI оставило в памяти проектора около %2$s МБ своих рабочих файлов. Эта версия Lumen OS их не убирает, поэтому установить её из пробного запуска на этом проекторе нельзя. Пробный запуск работает. Чтобы оставить Lumen OS, используйте установщик для компьютера из инструкции.</string>
+    <string name="msg_check_ok_leftovers_kept">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть. Прошлое обновление XGIMI оставило в памяти проектора около %2$s МБ своих рабочих файлов. Эта версия Lumen OS их не убирает, поэтому установить её из пробного запуска на этом проекторе нельзя. Пробный запуск работает. Как только появится сборка, которая их убирает, Lumen Installer предложит установку здесь.</string>
     <string name="msg_leftovers_stick">Прошлое обновление XGIMI оставило в памяти проектора около %1$s МБ своих служебных файлов, и с ними что-то необычно, поэтому Lumen OS их убирать не будет. Сначала верните систему XGIMI флешкой восстановления, потом сразу возвращайтесь сюда. Как сделать флешку, написано в инструкции на странице проекта.</string>
     <string name="msg_check_ok">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть.</string>
     <string name="msg_net_failed">Не удалось связаться с Lumen OS в интернете (%1$s).</string>
@@ -73,7 +73,7 @@
     <string name="msg_sha_mismatch">Скачанное не прошло проверку подлинности и удалено. Нажмите «Продолжить», чтобы скачать заново.</string>
     <string name="msg_verified">Проверка подлинности пройдена.</string>
     <string name="msg_handover_yes">Эта версия умеет устанавливаться из пробного запуска. Выберите «Установить» внутри пробного запуска.</string>
-    <string name="msg_handover_no">Lumen OS %1$s пока не умеет устанавливаться из пробного запуска. Проба покажет Lumen OS. Чтобы оставить её, воспользуйтесь установщиком для компьютера из инструкции.</string>
+    <string name="msg_handover_no">Lumen OS %1$s пока не умеет устанавливаться из пробного запуска. Проба покажет Lumen OS. Как только появится сборка с установкой, Lumen Installer предложит её здесь.</string>
     <string name="msg_prepared">Lumen OS подготовлена к пробному запуску.</string>
     <string name="msg_prepare_failed">Подготовка остановилась (%1$s).</string>
     <string name="msg_trial_only">На %1$s Lumen OS уже можно попробовать. Установка насовсем на этой модели пока закрыта, установщик внутри пробного запуска скажет об этом.</string>
@@ -87,17 +87,8 @@
     <string name="msg_stopped">Пауза. Нажмите «Продолжить».</string>
     <string name="msg_error">Что-то пошло не так (%1$s).</string>
 
-    <string name="opt_source_net">Откуда взять Lumen OS: скачать</string>
-    <string name="opt_source_stick">Откуда взять Lumen OS: флешка или папка LumenOS</string>
     <string name="confirm_trial_only">На %1$s это только проба. Установка насовсем на этой модели пока закрыта.</string>
     <string name="confirm_space">Нужно места в памяти проектора: %1$s ГБ. Свободно: %2$s ГБ.</string>
-    <string name="confirm_stick">Не вынимайте флешку, пока пробный запуск не будет готов.</string>
-    <string name="msg_stick_not_found">Нет папки LumenOS ни на флешке, ни в памяти проектора. Скопируйте папку LumenOS в корень флешки и вставьте флешку или скопируйте её в /sdcard/LumenOS. В папке должны быть файл Lumen OS, SHA256SUMS и SHA256SUMS.sig.</string>
-    <string name="msg_stick_no_access">Флешку не удаётся прочитать. Разрешите доступ к файлам, когда проектор спросит. Или положите папку LumenOS в Android/data/org.lumen.installer/files на флешке.</string>
-    <string name="msg_stick_found">Флешка: Lumen OS %1$s для этого проектора, %2$s МБ (%3$s).</string>
-    <string name="msg_stick_no_image">Список выпуска на флешке называет %1$s, но такого файла в папке нет.</string>
-    <string name="msg_stick_root_unreadable">Файл Lumen OS на флешке не читается (%1$s). Ничего не изменилось.</string>
-    <string name="msg_from_stick">Lumen OS берётся с флешки, %1$s МБ. Скачивать не нужно.</string>
 
     <!-- About (the round "i") -->
     <string name="about_title">О программе</string>
@@ -129,17 +120,15 @@
     <string name="about_log_empty">Пока ничего.</string>
 
     <!-- the catalog of builds (1.0.3) and the version choice: these texts in every language of apps/i18n -->
-    <string name="msg_catalog_missing">Списка сборок Lumen OS пока нет. Подключите проектор к интернету и нажмите «Повторить». Или выберите папку LumenOS, в которой есть этот список.</string>
+    <string name="msg_catalog_missing">Списка сборок Lumen OS пока нет. Подключите проектор к интернету и нажмите «Повторить».</string>
     <string name="msg_catalog_loading">Ищем сборки Lumen OS для этого проектора.</string>
     <string name="msg_catalog_bad_sig">Список сборок Lumen OS не прошёл проверку подлинности. Ничего не изменилось.</string>
     <string name="msg_catalog_bad">Список сборок Lumen OS повреждён (%1$s). Ничего не изменилось.</string>
     <string name="msg_catalog_old">Этот список сборок Lumen OS устарел (%1$s). У установщика уже есть более новый (%2$s). Ничего не изменилось.</string>
     <string name="msg_catalog_note">%1$s</string>
     <string name="msg_catalog_offline">Сейчас нет интернета. Установщик показывает список сборок, сохранённый %1$s.</string>
-    <string name="msg_no_build">Для этого проектора пока нет сборки Lumen OS (%1$s). Новые сборки появляются здесь: %2$s</string>
-    <string name="msg_computer_only">На %1$s Lumen OS ставится с компьютера. Пробный запуск без компьютера на этой модели невозможен. Как это сделать, описано в инструкции: %2$s</string>
+    <string name="msg_no_build">В Lumen Installer пока нет Lumen OS для этого проектора (%1$s). Новые сборки появляются здесь: %2$s</string>
     <string name="msg_catalog_mismatch">Выпуск Lumen OS не совпадает со списком сборок (%1$s). Ничего не скачано.</string>
-    <string name="msg_stick_not_listed">Файл Lumen OS в папке LumenOS не текущая сборка для этого проектора. Скопируйте в папку файлы текущего выпуска. Ничего не изменилось.</string>
     <string name="opt_version_stable">Версия: стабильная %1$s</string>
     <string name="opt_version_beta">Версия: бета %1$s</string>
     <string name="opt_version_stable_hint">Проверенный выпуск Lumen OS для этого проектора.</string>

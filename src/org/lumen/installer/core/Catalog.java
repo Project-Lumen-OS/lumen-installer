@@ -45,7 +45,7 @@ public final class Catalog {
     public static final class Build {
         public final String version, edition, image, imageName, sha256, sums;
         public final ReleaseChannel channel;
-        /** the app starts it as a trial; otherwise it comes from the computer installer of the guide */
+        /** the app starts it as a trial; otherwise (way "computer") the app does not offer it at all */
         public final boolean trial;
         /** its image carries the installer that installs Lumen OS for good from the trial */
         public final boolean install;
@@ -115,12 +115,6 @@ public final class Catalog {
 
         /** at least one build the app can start as a trial */
         public boolean hasTrial() { return build(ReleaseChannel.STABLE) != null || build(ReleaseChannel.BETA) != null; }
-
-        /** the trial build whose image is exactly this file (a LumenOS folder), null = none */
-        public Build byImage(String name, String sha256) {
-            for (Build b : builds) if (b.trial && b.imageName.equals(name) && b.sha256.equals(sha256)) return b;
-            return null;
-        }
 
         public Stock stock(String version) {
             for (Stock s : stock) if (s.version.equals(version)) return s;

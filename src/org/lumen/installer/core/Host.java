@@ -23,27 +23,6 @@ public interface Host {
 
     interface LineSink { void line(String s); }
 
-    /** A removable volume (USB stick) as the app sees it: its root (/storage/&lt;id&gt;) and the app's own folder on it
-     *  (/storage/&lt;id&gt;/Android/data/org.lumen.installer/files), which the app may write without any permission. */
-    final class Volume {
-        public final File root, appDir;
-        /** a USB stick (false: the built-in shared storage) */
-        public final boolean removable;
-        public Volume(File root, File appDir) { this(root, appDir, true); }
-        public Volume(File root, File appDir, boolean removable) { this.root = root; this.appDir = appDir; this.removable = removable; }
-        @Override public String toString() { return root.getPath(); }
-    }
-
-    /** The USB sticks mounted now (empty: none). */
-    default List<Volume> volumes() { return Collections.emptyList(); }
-
-    /** Where the stick source looks for a LumenOS folder: the sticks, then the built-in shared storage
-     *  (/sdcard/LumenOS). Only for reading a folder, never a download target. */
-    default List<Volume> kitVolumes() { return volumes(); }
-
-    /** May the app read files outside its own folder on a stick (the storage permission)? */
-    default boolean canReadSticks() { return false; }
-
     /** An app: its package, version code and signing certificates (sha256 of each, sorted, joined by commas). */
     final class App {
         public final String pkg, signers;

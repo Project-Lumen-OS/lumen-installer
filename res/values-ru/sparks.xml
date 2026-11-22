@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sparks_send_info">Этой прошивки ещё нет в базе Lumen. Отправьте сведения о системе и получите Вспышку</string>
+    <string name="sparks_code">Ваша Вспышка. Отсканируйте код телефоном или введите его в боте @Lumen_OS_Bot</string>
+    <string name="sparks_waiting">Вспышка придёт после проверки</string>
+    <string name="sparks_installed_before">На этом проекторе Lumen OS уже ставили, за установку Вспышки нет</string>
+</resources>

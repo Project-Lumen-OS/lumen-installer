@@ -22,12 +22,12 @@ import java.util.Properties;
  * and a fake GitHub. The app calls it from a worker thread.
  *
  *   detect   props only: model, board, stock version, Lumen/trial already running, orange, looked up in the signed
- *            catalog of builds (Catalog: the last verified one the app keeps, or the one of a LumenOS folder).
+ *            catalog of builds (Catalog: the last verified one the app keeps).
  *            The app knows no model: the catalog lists the models that have a published build, and each build.
- *   check    a fresh signed catalog (download source), root probe (debugserver), the build's signed SHA256SUMS (it must
- *            give the catalog's sha256) and the image size on the server (the catalog's), free space; or, with the
- *            USB stick source, the same signed SHA256SUMS read from the stick, naming exactly a build of the catalog
- *   download the image, resumable (Range + If-Range), into the app's files dir on /data; nothing with the stick source
+ *   check    a fresh signed catalog, root probe (debugserver), the build's signed SHA256SUMS (it must give the
+ *            catalog's sha256) and the image size on the server (the catalog's), free space
+ *   download the image over the network, resumable (Range + If-Range), into the app's files dir on /data. The network
+ *            is the only source (1.0.9): no USB stick, no LumenOS folder, no computer.
  *   verify   sha256 against the catalog and the signed SHA256SUMS; whether the build installs itself from the trial
  *   prepare  the AVB hashtree footer as a separate tail file (AvbTail), checked again after writing
  *   start    ONLY after the user confirmed: root `cat image tail | gsi_tool install ... --no-reboot`, then
@@ -44,13 +44,9 @@ import java.util.Properties;
  *            server (PartUpload), going on after a break where it stopped. No writes outside the app's own dirs. The
  *            full firmware copy to a USB stick is LumenDump's, not this app's.
  * Nothing is written outside the app's own dirs before start, and start writes only /data/gsi and /metadata/gsi
- * (the trial's own files; they must be on /data, never on a stick). Models that are not supported never reach the
- * release, the stick or the root side.
+ * (the trial's own files, on /data). Models that are not supported never reach the release or the root side.
  */
 public final class Engine {
-
-    /** the folder on the stick: at its root (needs the storage permission) or in the app's own folder on it */
-    public static final String KIT_DIR = "LumenOS";
 
     public interface Listener {
         void step(InstallStep s, StepStatus st);
@@ -64,8 +60,8 @@ public final class Engine {
     /**
      * the signed catalog of builds: its address, and the certificates of its key (the only ones in the app). 1.0.3 reads
      * catalog.json and refuses that whole file for a model code that is not a G and four digits, so the codes of other
-     * letters are only in catalog-v2.json. Each file has its own serial: the kept copy, the LumenOS folder's copy and the
-     * download all use this one name, so a serial is only ever compared with one of the same file.
+     * letters are only in catalog-v2.json. Each file has its own serial: the kept copy and the
+     * download use this one name, so a serial is only ever compared with one of the same file.
      */
     public static final String CATALOG_NAME = "catalog-v2.json";
     public static final String CATALOG_URL = "https://github.com/Project-Lumen-OS/lumen-installer/releases/download/index/" + CATALOG_NAME;
@@ -105,11 +101,11 @@ public final class Engine {
         /** the catalog entry of this model; null = no build for it (or no catalog yet) */
         public Catalog.Entry model;
         /** the build a download reads: the stable one, or the beta one when the user chose Beta (or when only a beta
-         *  exists); null with the stick source (the folder's file names the build) */
+         *  exists) */
         public Catalog.Build build;
         /** the entry's line for this stock version, null when the version is not in it */
         public Catalog.Stock stockRow;
-        /** a stable AND a beta build and the download source is on: the Version choice is offered */
+        /** a stable AND a beta build: the Version choice is offered */
         public boolean betaOffered;
         /** a beta build only and the download source is on: no Version choice, the beta is read directly and the
          *  screen says that only a beta version exists */
@@ -142,7 +138,7 @@ public final class Engine {
     public Detection det;
     /** the signed catalog in use (null: none verified yet) */
     public Catalog catalog;
-    /** the build the last check found (download: the chosen one, stick: the folder's), null before */
+    /** the build the last check found (the chosen one), null before */
     public Catalog.Build build;
     public TrialState trial = TrialState.NONE;
     public String version = "", imageName = "", imageSha = "", imageUrl = "";
@@ -179,18 +175,13 @@ public final class Engine {
 
     // ------------------------------------------------------------------------------------------------- state
     File stateFile() { return new File(dir, "state.properties"); }
-    /** the image in use: the download (in the app's dir) or the stick folder's file */
-    public File imageFile() { String p = state("image.path"); return p.isEmpty() ? internalImage() : new File(p); }
-    File internalImage() { return new File(dir, "image.img"); }
+    /** the image: always the download, in the app's dir on /data */
+    public File imageFile() { return new File(dir, "image.img"); }
     public File tailFile() { return new File(dir, "image.tail"); }
 
     /** the last verified signed catalog (the newest serial the app has seen), kept for the next start */
     File catalogFile() { return new File(dir, CATALOG_NAME); }
     File catalogSigFile() { return new File(dir, CATALOG_NAME + ".sig"); }
-
-    public ImageSource source() { return "stick".equals(state("source")) ? ImageSource.STICK : ImageSource.NET; }
-
-    public void setSource(ImageSource s) { set("source", s == ImageSource.STICK ? "stick" : "net"); saveState(); }
 
     /** Stable unless the user chose Beta (any other stored value is Stable). */
     public ReleaseChannel channel() { return "beta".equals(state("channel")) ? ReleaseChannel.BETA : ReleaseChannel.STABLE; }
@@ -204,9 +195,6 @@ public final class Engine {
 
     public boolean force() { return force; }
 
-    /** is the image our own download, which we may delete? Never a stick folder file. */
-    boolean imageIsDownload() { return !"stick".equals(state("image.from")); }
-
     private void loadState() {
         st.clear();
         File f = stateFile();
@@ -216,6 +204,10 @@ public final class Engine {
         } catch (IOException e) {
             st.clear();
         }
+        // 1.0.8 and older could read the image from a USB stick or a LumenOS folder: that file is not ours, so its
+        // record is dropped (the file stays untouched) and the next check downloads the image
+        if ("stick".equals(st.getProperty("image.from"))) for (String k : IMAGE_KEYS) st.remove(k);
+        st.remove("source");
     }
 
     private void saveState() {
@@ -233,13 +225,15 @@ public final class Engine {
 
     private void set(String k, String v) { st.setProperty(k, v == null ? "" : v); }
 
+    /** what the state says about the image (image.path and image.from: 1.0.8 and older, a stick file) */
+    private static final String[] IMAGE_KEYS = { "image.name", "image.sha", "image.size", "image.url", "image.verified",
+            "image.mtime", "image.install", "image.clears", "image.path", "image.from", "tail.sha", "tail.size", "total", "version",
+            "model" };
+
     private void forgetImage() {
-        if (imageIsDownload()) ParallelDownload.discard(imageFile());   // a file of the user's stick folder is never deleted
-        ParallelDownload.discard(internalImage());   // with a partial download (image.img.part and its ranges)
+        ParallelDownload.discard(imageFile());   // with a partial download (image.img.part and its ranges)
         tailFile().delete();
-        for (String k : new String[] { "image.name", "image.sha", "image.size", "image.url", "image.verified",
-                "image.mtime", "image.install", "image.clears", "image.path", "image.from", "tail.sha", "tail.size", "total", "version",
-                "model" }) st.remove(k);
+        for (String k : IMAGE_KEYS) st.remove(k);
         saveState();
     }
 
@@ -275,38 +269,13 @@ public final class Engine {
         }
     }
 
-    /** The catalog a LumenOS folder carries (catalog-v2.json + .sig next to the release files), when one is there. */
-    private File kitCatalogDir() {
-        for (Host.Volume v : host.kitVolumes()) {
-            for (File d : new File[] { new File(v.root, KIT_DIR), new File(v.appDir, KIT_DIR) }) {
-                if (new File(d, CATALOG_NAME).canRead()) return d;
-            }
-        }
-        return null;
-    }
-
     /**
-     * The catalog in use: the newest verified one of the app's own copy and (stick source) the LumenOS folder's. A
-     * folder catalog newer than the app's copy becomes the app's copy. null = none.
+     * The catalog in use: the newest verified one of this run and the app's own kept copy. null = none.
      */
     public Catalog currentCatalog() {
         Catalog best = catalog;
         Catalog own = readCatalog(catalogFile(), catalogSigFile(), "kept");
         if (own != null && (best == null || own.serial > best.serial)) best = own;
-        if (source() == ImageSource.STICK) {
-            File kd = kitCatalogDir();
-            Catalog k = kd == null ? null : readCatalog(new File(kd, CATALOG_NAME), new File(kd, CATALOG_NAME + ".sig"), "LumenOS folder");
-            if (k != null && (best == null || k.serial > best.serial)) {
-                best = k;
-                try {
-                    keepCatalog(Bytes.readFile(new File(kd, CATALOG_NAME), 1 << 20), Bytes.readFile(new File(kd, CATALOG_NAME + ".sig"), 4096));
-                } catch (IOException e) {
-                    l.log("catalog not kept: " + e.getMessage());
-                }
-            } else if (k != null && best != null && k.serial < best.serial) {
-                l.log("LumenOS folder: its catalog (" + k.serial + ") is older than the one in use (" + best.serial + ")");
-            }
-        }
         catalog = best;
         return best;
     }
@@ -367,12 +336,11 @@ public final class Engine {
         d.model = cat == null ? null : cat.find(d.code);
         // the builds this stock version can take: a stable one and the newest beta, each only when it lists the version
         Catalog.Build stable = fits(d.model, ReleaseChannel.STABLE, d.stock), beta = fits(d.model, ReleaseChannel.BETA, d.stock);
-        boolean net = source() == ImageSource.NET;
-        d.betaOffered = net && stable != null && beta != null;
-        d.betaOnly = net && stable == null && beta != null;
+        d.betaOffered = stable != null && beta != null;
+        d.betaOnly = stable == null && beta != null;
         d.stableVersion = stable == null ? "" : stable.version;
         d.betaVersion = beta == null ? "" : beta.version;
-        d.build = net ? row(stable, beta) : null;
+        d.build = row(stable, beta);
         d.stockRow = d.model == null ? null : d.model.stock(d.stock);
         d.name = d.model != null ? d.model.name : (d.code.isEmpty() ? "?" : d.code);
         String lumen = Props.get(p, "ro.lumen.version");
@@ -385,15 +353,14 @@ public final class Engine {
             d.verdict = d.appUpdate != null ? Msg.APP_UPDATE_OFFERED : Msg.ALREADY_LUMEN; d.args = new String[] { lumen };
         } else if (cat == null) {
             d.verdict = Msg.CATALOG_MISSING;
-        } else if (d.model == null) {
+        } else if (d.model == null || !d.model.hasTrial()) {
+            // no build, or only builds a computer installs (way "computer"): the app installs over the network only
             d.verdict = Msg.NO_BUILD; d.args = new String[] { code, cat.releases };
-        } else if (!d.model.hasTrial()) {
-            d.verdict = Msg.COMPUTER_ONLY; d.args = new String[] { d.model.name, cat.guide };
         } else if (!d.model.board.equals(d.board)) {
             d.verdict = Msg.BOARD_MISMATCH; d.args = new String[] { code, d.board.isEmpty() ? "?" : d.board };
         } else if (d.model.refused.containsKey(d.stock)) {
             d.verdict = Msg.CATALOG_NOTE; d.args = new String[] { Catalog.text(d.model.refused.get(d.stock), cfg.lang) };
-        } else if ((d.stockRow == null || (net && d.build == null)) && !forceTaken(d, net)) {
+        } else if ((d.stockRow == null || d.build == null) && !forceTaken(d)) {
             if (d.stockRow == null) {
                 // the catalog's stock versions of this model code (another one may be a firmware of another model)
                 d.verdict = Msg.MODEL_STOCK_UNSUPPORTED;
@@ -415,8 +382,8 @@ public final class Engine {
     }
 
     /** A stock version the catalog does not list for this known model (it has a trial build): the choice is offered,
-     *  and when the user ticked it the build becomes the newest trial build (download) or the stick folder's. */
-    private boolean forceTaken(Detection d, boolean net) {
+     *  and when the user ticked it the build becomes the newest trial build. */
+    private boolean forceTaken(Detection d) {
         Catalog.Build b = forceBuild(d.model);
         if (b == null) return false;
         d.forceOffered = true;
@@ -424,7 +391,7 @@ public final class Engine {
         d.forced = true;
         d.betaOffered = d.betaOnly = false;
         d.stableVersion = d.betaVersion = "";
-        d.build = net ? b : null;
+        d.build = b;
         return true;
     }
 
@@ -473,21 +440,13 @@ public final class Engine {
         return false;
     }
 
-    /** The stick folder found by {@link #findKit}: a build of the catalog, read from the stick. */
-    static final class Kit {
-        File dir, image;
-        Catalog.Build build;
-    }
-
     /**
-     * Detection, the stick folder (stick source), root probe, the build's signed files (download source), free
-     * space. Writes nothing except the app's own state file.
+     * Detection, root probe, the build's signed files, free space. Writes nothing except the app's own state file.
      */
     public boolean check() {
         l.step(InstallStep.CHECK, StepStatus.RUNNING);
-        ImageSource src = source();
-        // the download source asks the catalog first, every time: what this model may get is the catalog's
-        if (src == ImageSource.NET && !refreshCatalog()) {
+        // the catalog first, every time: what this model may get is the catalog's
+        if (!refreshCatalog()) {
             l.step(InstallStep.CHECK, StepStatus.FAILED);
             det = detect();
             return false;
@@ -496,16 +455,9 @@ public final class Engine {
         if (!d.ok()) return fail(InstallStep.CHECK, d.verdict, d.args);
         Catalog.Entry m = d.model;
         List<X509Certificate> certs = m.certs;
-        // the stick folder first: pure file reads, verified exactly like the download (same certificates, same build)
-        Kit kit = null;
-        if (src == ImageSource.STICK) {
-            kit = findKit(m, certs, d);
-            if (kit == null) return false;
-        }
 
-        // root probe: proves the route, reads what an app cannot see (and, for a stick, that root reads the file)
+        // root probe: proves the route, reads what an app cannot see
         Root.Job probe = new Root.Job("probe", Root.newNonce());
-        if (kit != null) probe.put("IMG", kit.image.getAbsolutePath()).put("IMG_SIZE", String.valueOf(kit.image.length()));
         Root.Result pr = runRoot(probe, cfg.probeTimeoutMs);
         if (pr == null) return fail(InstallStep.CHECK, Msg.ROOT_UNAVAILABLE);
         if (!pr.done) return fail(InstallStep.CHECK, rootMsg(pr), rootArgs(pr));
@@ -548,39 +500,23 @@ public final class Engine {
         }
         trial = TrialState.NONE;
         if (!state("trial.version").isEmpty()) { st.remove("trial.version"); st.remove("trial.model"); }
-        if (kit != null && !"1".equals(pr.kv("img_readable"))) {
-            return fail(InstallStep.CHECK, Msg.STICK_ROOT_UNREADABLE, kit.image.getPath() + " (" + pr.kv("img_path") + ")");
-        }
 
-        File target;   // where the image is (stick) or goes (download)
-        String from;
-        Catalog.Build b;
-        if (kit != null) {
-            b = kit.build;
-            imageUrl = "";
-            imageSize = kit.image.length();
-            target = kit.image;
-            from = "stick";
-        } else {
-            // the build of the catalog, checked against its own signed SHA256SUMS and the file on the server
-            b = d.build;
-            l.log("build " + b.channel + " " + b.version + " (" + b.image + ")");
-            try {
-                byte[] sums = http.fetch(b.sums, 64 * 1024);
-                byte[] ssig = http.fetch(b.sums + ".sig", 4096);
-                String sha = Release.imageSha(sums, ssig, certs, b.imageName);
-                if (!sha.equals(b.sha256)) return fail(InstallStep.CHECK, Msg.CATALOG_MISMATCH, b.imageName + " sha256");
-                imageUrl = b.image;
-                imageSize = http.size(imageUrl);
-            } catch (Release.Bad x) {
-                return fail(InstallStep.CHECK, x.msg, x.msg.args == 0 ? new String[0] : new String[] { x.arg == null ? "" : x.arg });
-            } catch (IOException e) {
-                return fail(InstallStep.CHECK, Msg.NET_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
-            }
-            if (imageSize != b.size) return fail(InstallStep.CHECK, Msg.CATALOG_MISMATCH, b.imageName + " " + imageSize + " bytes");
-            target = internalImage();
-            from = "download";
+        // the build of the catalog, checked against its own signed SHA256SUMS and the file on the server
+        Catalog.Build b = d.build;
+        l.log("build " + b.channel + " " + b.version + " (" + b.image + ")");
+        try {
+            byte[] sums = http.fetch(b.sums, 64 * 1024);
+            byte[] ssig = http.fetch(b.sums + ".sig", 4096);
+            String sha = Release.imageSha(sums, ssig, certs, b.imageName);
+            if (!sha.equals(b.sha256)) return fail(InstallStep.CHECK, Msg.CATALOG_MISMATCH, b.imageName + " sha256");
+            imageUrl = b.image;
+            imageSize = http.size(imageUrl);
+        } catch (Release.Bad x) {
+            return fail(InstallStep.CHECK, x.msg, x.msg.args == 0 ? new String[0] : new String[] { x.arg == null ? "" : x.arg });
+        } catch (IOException e) {
+            return fail(InstallStep.CHECK, Msg.NET_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
         }
+        if (imageSize != b.size) return fail(InstallStep.CHECK, Msg.CATALOG_MISMATCH, b.imageName + " " + imageSize + " bytes");
         build = b;
         version = b.version;
         imageName = b.imageName;
@@ -588,37 +524,31 @@ public final class Engine {
         if (imageSize <= 0 || imageSize % AvbTail.BS != 0 || imageSize > Catalog.MAX_IMAGE) {
             return fail(InstallStep.CHECK, Msg.IMAGE_SIZE_BAD, String.valueOf(imageSize));
         }
-        // another build, another model or another place: the old download is dropped (a stick folder file never)
-        if (!imageSha.equals(state("image.sha")) || !m.code.equals(state("model"))
-                || !target.getAbsolutePath().equals(imageFile().getAbsolutePath()) || !from.equals(state("image.from").isEmpty() ? "download" : state("image.from"))) {
-            forgetImage();
-        }
+        // another build or another model: the old download is dropped
+        if (!imageSha.equals(state("image.sha")) || !m.code.equals(state("model"))) forgetImage();
         set("model", m.code);
         set("version", version);
         set("image.name", imageName);
         set("image.sha", imageSha);
         set("image.size", String.valueOf(imageSize));
         set("image.url", imageUrl);
-        set("image.path", target.getAbsolutePath());
-        set("image.from", from);
         set("image.install", b.install ? "1" : "0");
         set("image.clears", b.clearsLeftovers ? "1" : "0");
         set("leftovers.kib", String.valueOf(leftoverKib));
         saveState();
-        if (kit == null) l.message(Msg.RELEASE_FOUND, version, mb(imageSize));
+        l.message(Msg.RELEASE_FOUND, version, mb(imageSize));
 
         // space on /data: the trial's files must be there (they are only ever made on /data; pinned, allocated in
         // full): the trial system (image + tail), the trial's userdata, and on Virtual A/B the size of super that is
         // kept free on top of each partition it creates (partition_installer.cpp
         // GetMinimumFreeSpaceThreshold, so the peak is userdata + system + super), the tail file, what is still to be
-        // downloaded, and a margin. A stick folder costs no /data space for the image itself.
+        // downloaded, and a margin.
         long tail = tailEstimate(imageSize);
-        boolean download = kit == null;
-        long have = download ? ParallelDownload.have(imageFile(), imageSize) : 0;
+        long have = ParallelDownload.have(imageFile(), imageSize);
         needSystem = imageSize + tail;
         needUserdata = cfg.userdataBytes;
         needReserve = virtualAb ? superBytes : 0;
-        needDownload = download ? imageSize - have : 0;
+        needDownload = imageSize - have;
         needMargin = tail + cfg.marginBytes;
         needData = needSystem + needUserdata + needReserve + needDownload + needMargin;
         long free = Math.min(dataFreeBytes, host.freeBytes(dir));
@@ -636,60 +566,6 @@ public final class Engine {
         return true;
     }
 
-    /**
-     * The stick folder: KIT_DIR at the root of a stick, or in the app's own folder on it. It holds what a release
-     * holds: SHA256SUMS + SHA256SUMS.sig (signed with this model's key) and an image that is a build of the catalog for
-     * this model (same name, same sha256); that build's stock versions count. null = refused (said why).
-     */
-    Kit findKit(Catalog.Entry m, List<X509Certificate> certs, Detection d) {
-        List<Host.Volume> vols = host.kitVolumes();
-        if (vols.isEmpty()) { fail(InstallStep.CHECK, Msg.STICK_NOT_FOUND); return null; }
-        File dirFound = null;
-        boolean perm = host.canReadSticks(), blocked = false;
-        for (Host.Volume v : vols) {
-            File top = new File(v.root, KIT_DIR), own = new File(v.appDir, KIT_DIR);
-            // the stick's root needs the storage permission (legacy storage); the app's own folder never does
-            File ts = new File(top, "SHA256SUMS");
-            if (dirFound == null) {
-                if (perm && ts.canRead()) dirFound = top;
-                else if (top.exists() && (!perm || ts.exists())) blocked = true;   // there, but not readable
-            }
-            if (dirFound == null && new File(own, "SHA256SUMS").canRead()) dirFound = own;
-        }
-        if (dirFound == null) {
-            fail(InstallStep.CHECK, blocked || !perm ? Msg.STICK_NO_ACCESS : Msg.STICK_NOT_FOUND);
-            return null;
-        }
-        l.log("stick folder " + dirFound);
-        Kit k = new Kit();
-        k.dir = dirFound;
-        try {
-            byte[] sums = Bytes.readFile(new File(dirFound, "SHA256SUMS"), 64 * 1024);
-            File sf = new File(dirFound, "SHA256SUMS.sig");
-            byte[] ssig = sf.canRead() ? Bytes.readFile(sf, 4096) : null;
-            for (Map.Entry<String, String> e : Release.listed(sums, ssig, certs).entrySet()) {
-                Catalog.Build b = m.byImage(e.getKey(), e.getValue());
-                if (b != null) { k.build = b; break; }
-            }
-        } catch (Release.Bad b) {
-            fail(InstallStep.CHECK, b.msg, b.msg.args == 0 ? new String[0] : new String[] { b.arg == null ? "" : b.arg });
-            return null;
-        } catch (IOException e) {
-            fail(InstallStep.CHECK, Msg.STICK_NO_ACCESS);
-            l.log("stick: " + e.getMessage());
-            return null;
-        }
-        if (k.build == null) { fail(InstallStep.CHECK, Msg.STICK_NOT_LISTED); return null; }
-        if (!k.build.stock.contains(d.stock) && !d.forced) {
-            fail(InstallStep.CHECK, Msg.STOCK_UNSUPPORTED, d.stock.isEmpty() ? "?" : d.stock, join(k.build.stock));
-            return null;
-        }
-        k.image = new File(dirFound, k.build.imageName);
-        if (!k.image.isFile() || !k.image.canRead()) { fail(InstallStep.CHECK, Msg.STICK_NO_IMAGE, k.build.imageName); return null; }
-        l.message(Msg.STICK_FOUND, k.build.version, mb(k.image.length()), dirFound.getPath());
-        return k;
-    }
-
     static long tailEstimate(long imageSize) {
         long t = 0;
         for (long s : AvbTail.levelSizes(imageSize)) t += s;
@@ -699,14 +575,6 @@ public final class Engine {
     // ------------------------------------------------------------------------------------------------- download
     public boolean download() {
         l.step(InstallStep.DOWNLOAD, StepStatus.RUNNING);
-        if ("stick".equals(state("image.from"))) {   // the stick folder's image is used where it is: nothing to download
-            File f = imageFile();
-            if (imageSize <= 0 || f.length() != imageSize) return fail(InstallStep.DOWNLOAD, Msg.NOT_READY);
-            l.progress(InstallStep.DOWNLOAD, imageSize, imageSize);
-            l.message(Msg.FROM_STICK, mb(imageSize));
-            l.step(InstallStep.DOWNLOAD, StepStatus.DONE);
-            return true;
-        }
         if (imageUrl.isEmpty() || imageSize <= 0) return fail(InstallStep.DOWNLOAD, Msg.NOT_READY);
         File f = imageFile();
         if (state("image.verified").equals(imageSha) && f.length() == imageSize) {
@@ -792,7 +660,7 @@ public final class Engine {
         }
         if (!got.equals(imageSha)) {
             l.log("sha256 " + got + " != " + imageSha);
-            forgetImage();   // a download is deleted; a stick folder file stays where it is (the user replaces it)
+            forgetImage();   // the download is deleted, the next run fetches it again
             return fail(InstallStep.VERIFY, Msg.SHA_MISMATCH);
         }
         set("image.verified", imageSha);
@@ -1117,10 +985,8 @@ public final class Engine {
         set("trial.model", det.model.code);
         saveState();
         trial = TrialState.OURS;
-        // the trial has its own copy now: free the /data the download took; an image in a stick folder stays for another
-        // trial, only the tail goes
-        if ("download".equals(state("image.from").isEmpty() ? "download" : state("image.from"))) forgetImage();
-        else forgetTail();
+        // the trial has its own copy now: free the /data the download took
+        forgetImage();
         l.message(Msg.STARTED);
         l.step(InstallStep.START, StepStatus.DONE);
         return true;

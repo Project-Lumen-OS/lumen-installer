@@ -34,7 +34,6 @@ import org.lumen.icons.Icons;
 import org.lumen.installer.core.ActionGate;
 import org.lumen.installer.core.Engine;
 import org.lumen.installer.core.Host;
-import org.lumen.installer.core.ImageSource;
 import org.lumen.installer.core.InstallStep;
 import org.lumen.installer.core.Msg;
 import org.lumen.installer.core.ReleaseChannel;
@@ -50,7 +49,7 @@ import java.util.Locale;
  * buttons; the five steps with their progress on the right, under them the card Firmware versions (the same rows as
  * the About page of Lumen OS, apps/core/lumen-about). Every action that writes outside
  * the app (start the trial, restart, remove the trial) asks first, with Cancel focused. Above the buttons, before a
- * step ran: where the image comes from (download, or a LumenOS folder on a USB stick), under it the version (the
+ * step ran: the version (the
  * catalog's stable build, or its newest beta). A button that starts a task works once: until the task ends it
  * says what runs ("Restarting…") and the remote does nothing on it (ActionGate).
  */
@@ -82,6 +81,9 @@ public class MainActivity extends Activity {
     /** the controls that work while a task runs (Pause of a download, About): OK on any other view does nothing */
     static final Object OFFERED = new Object();
     AlertDialog asking;
+    /** the Sparks card (none in a build with the build.sh switch LI_CONTRIB=0) */
+    LinearLayout contribCard;
+    ContribCard contrib;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -118,6 +120,14 @@ public class MainActivity extends Activity {
         trialInfo.setPadding(dp(14), dp(12), dp(14), dp(12));
         trialInfo.setBackground(round(CARD, dp(18)));
         left.addView(trialInfo, lp(0, dp(14), 0, 0));
+        contribCard = new LinearLayout(this);
+        contribCard.setOrientation(LinearLayout.HORIZONTAL);
+        contribCard.setGravity(Gravity.CENTER_VERTICAL);
+        contribCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        contribCard.setBackground(round(CARD, dp(18)));
+        contribCard.setVisibility(View.GONE);
+        left.addView(contribCard, lp(0, dp(12), 0, 0));
+        contrib = new ContribCard(this, contribCard);
         forceBox = new LinearLayout(this);
         forceBox.setOrientation(LinearLayout.VERTICAL);
         forceRow = new LinearLayout(this);
@@ -215,10 +225,9 @@ public class MainActivity extends Activity {
         Snap s = Snap.I;
         Engine e = WorkService.engine(this);
         if (s.det == null) s.det = e.detect();
-        s.source = e.source();
         // the signed catalog: asked for once per start of the app (it lists the models that have a build, and their
         // builds); the last verified copy is used until it arrives
-        if (!s.catalogTried && !s.busy && s.gate.held() == null && s.source == ImageSource.NET) {
+        if (!s.catalogTried && !s.busy && s.gate.held() == null) {
             s.catalogTried = true;
             act(Task.CATALOG);
         }
@@ -321,6 +330,7 @@ public class MainActivity extends Activity {
         renderRate(s);
         renderVersions(d);
         renderButtons(s);
+        contrib.render(s);
     }
 
     /** While the image or an app update downloads: the speed of the last seconds and about how many minutes are left
@@ -363,10 +373,10 @@ public class MainActivity extends Activity {
             if (key.endsWith(":pause")) add(R.string.btn_pause, v -> startService(WorkService.task(this, "stop"))).setTag(OFFERED);
             first.requestFocus();
         } else if ("nocatalog".equals(key)) {
-            // no verified catalog yet: ask again (download), or read the LumenOS folder's catalog (stick)
+            // no verified catalog yet: ask again
             first = add(R.string.btn_retry, v -> {
                 if (Snap.I.busy) return;
-                if (Snap.I.source == ImageSource.NET) { act(Task.CATALOG); return; }
+                act(Task.CATALOG);
                 Snap.I.det = WorkService.engine(this).detect();
                 Snap.I.seq++;
                 render();
@@ -390,11 +400,10 @@ public class MainActivity extends Activity {
             String keep = getString(s.handover == 1 ? R.string.confirm_keep_yes : R.string.confirm_keep_no);
             String space = s.need.isEmpty() ? "" : " " + getString(R.string.confirm_space, Engine.gb(Engine.parseLongSafe(s.need)),
                     Engine.gb(Engine.parseLongSafe(s.free)));
-            String stick = s.source == ImageSource.STICK ? " " + getString(R.string.confirm_stick) : "";
             // the catalog says the install from the trial is not open for this build and stock: said before the start
             String only = s.trialOnly ? " " + getString(R.string.confirm_trial_only, d.name) : "";
             first = add(R.string.btn_start, v -> confirm(R.string.confirm_start_title,
-                    getString(R.string.confirm_start_body) + " " + keep + space + stick + only, R.string.btn_start, () -> act(Task.START)));
+                    getString(R.string.confirm_start_body) + " " + keep + space + only, R.string.btn_start, () -> act(Task.START)));
             add(R.string.btn_later, v -> finish());
         } else if ("armed".equals(key)) {
             first = add(R.string.btn_restart, v -> act(Task.RESTART));
@@ -441,15 +450,14 @@ public class MainActivity extends Activity {
         return v.getId();
     }
 
-    /** The choices, only before the first step ran (nothing to undo then), above the buttons: the source, under it the
-     *  version (a model with a stable and a beta build, download source: the stable build by default, Beta switches to
-     *  the newest beta) with a line beside it on what it means, or for a model with a beta only the line that only a
+    /** The choices, only before the first step ran (nothing to undo then), above the buttons: the version (a model
+     *  with a stable and a beta build: the stable build by default, Beta switches to the newest beta) with a line beside it on what it means, or for a model with a beta only the line that only a
      *  beta exists (no choice). */
     void renderOptions(Snap s, String key) {
         boolean show = "idle".equals(key) || "continue".equals(key) || "nocatalog".equals(key);
-        boolean beta = show && s.source == ImageSource.NET && s.det != null && s.det.betaOffered;
-        boolean only = show && s.source == ImageSource.NET && s.det != null && s.det.betaOnly;
-        String k = show ? s.source + "|" + (beta ? s.channel + s.det.stableVersion + s.det.betaVersion : only ? "only" : "-") : "";
+        boolean beta = show && s.det != null && s.det.betaOffered;
+        boolean only = show && s.det != null && s.det.betaOnly;
+        String k = show ? "|" + (beta ? s.channel + s.det.stableVersion + s.det.betaVersion : only ? "only" : "-") : "";
         if (k.equals(optionsKey)) return;
         optionsKey = k;
         View cur = getCurrentFocus();   // a toggle keeps the focus where it was
@@ -459,20 +467,6 @@ public class MainActivity extends Activity {
         version.removeAllViews();
         version.setVisibility(beta || only ? View.VISIBLE : View.GONE);
         if (!show) return;
-        addTo(options, s.source == ImageSource.STICK ? R.string.opt_source_stick : R.string.opt_source_net, v -> {
-            if (Snap.I.busy || Snap.I.gate.held() != null) return;
-            ImageSource n = Snap.I.source == ImageSource.STICK ? ImageSource.NET : ImageSource.STICK;
-            Engine e = WorkService.engine(this);
-            e.setSource(n);
-            Snap.I.source = n;
-            Snap.I.det = e.detect();   // the row in use depends on the source (Beta never applies to a stick folder)
-            Snap.I.resetSteps();
-            Snap.I.prepared = false;
-            if (n == ImageSource.STICK && checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[] { Manifest.permission.READ_EXTERNAL_STORAGE }, 1);
-            }
-            render();
-        });
         View focus = null;
         if (beta) {
             // Version: Stable (the catalog's stable build) or Beta (its newest beta, the same safety check); remembered

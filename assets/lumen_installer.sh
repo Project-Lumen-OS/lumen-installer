@@ -10,7 +10,6 @@
 # Jobs (job.conf: ACTION=, NONCE=, then the parameters the app computed; parsed, never sourced):
 #   probe    read only: what an app cannot see (root, gsi_tool, /metadata/gsi, a trial installed or running, a
 #            pending A/B update and what a finished one left, free space of /data in KiB, size of super in KiB).
-#            With IMG (+ IMG_SIZE): whether root reads that file (an image on a USB stick)
 #   install  `cat IMG TAIL | gsi_tool install --gsi-size TOTAL --userdata-size USERDATA --no-reboot`, then
 #            `gsi_tool enable --single-boot`; writes only the trial's own files (under /data/gsi and /metadata/gsi).
 #            Any failure: `gsi_tool wipe`, nothing stays armed. MODEL: the model code the app found in the signed
@@ -30,8 +29,6 @@
 #            app removes personal data before anything leaves. The full firmware copy to a USB stick is LumenDump's
 #            (apps/LumenDump, apps/core/lumen-dump), not this app's.
 # It never reboots on its own and never writes a partition, misc, uenv or vbmeta.
-# A file on a USB stick is passed as the app sees it (/storage/<volume id>/...); root reads it where vold mounted the
-# volume (/mnt/media_rw/<volume id>/...), which needs no FUSE view and no app permission.
 #
 # Output (status.txt, tailed by the app): LUMENINST_START <nonce>, KV k=v, LOG text, LUMENINST_DONE <nonce> or
 # LUMENINST_FAIL <nonce> <code> [detail].
@@ -47,8 +44,6 @@ METADATA=${LI_METADATA:-/metadata}
 DATA=${LI_DATA:-/data}
 BYNAME=${LI_BYNAME:-/dev/block/by-name}
 SYSBLOCK=${LI_SYSBLOCK:-/sys/class/block}
-MEDIA_RW=${LI_MEDIA_RW:-/mnt/media_rw}
-DATA_MEDIA=${LI_DATA_MEDIA:-/data/media}
 XGIMICONFIG=${LI_XGIMICONFIG:-/mnt/vendor/xgimiconfig}
 MAPPER=${LI_MAPPER:-/dev/block/mapper}
 MOUNTS=${LI_MOUNTS:-/proc/mounts}
@@ -79,21 +74,6 @@ blk_kib() {
   echo $((s / 2))
 }
 model() { m=$(prop ro.boot.xgimi.modelname); [ -n "$m" ] || m=$(prop ro.xgimi.modelname); echo "$m"; }
-# the path root reads for a path of the app: /storage/<id>/x -> /mnt/media_rw/<id>/x when that volume is mounted there
-# (a USB stick), anything else unchanged
-dev_path() {
-  case "$1" in
-    /storage/emulated/[0-9]*/*)
-      # the built-in shared storage (/sdcard/LumenOS): root reads the files under /data/media/<user>, no FUSE view
-      v=${1#/storage/emulated/}; u=${v%%/*}; rest=${v#*/}
-      case "$u" in *[!0-9]*) echo "$1" ;; *) if [ -e "$DATA_MEDIA/$u/$rest" ]; then echo "$DATA_MEDIA/$u/$rest"; else echo "$1"; fi ;; esac ;;
-    /storage/emulated/*|/storage/self/*) echo "$1" ;;
-    /storage/*/*)
-      v=${1#/storage/}; id=${v%%/*}; rest=${v#*/}
-      if [ -n "$id" ] && [ -d "$MEDIA_RW/$id" ]; then echo "$MEDIA_RW/$id/$rest"; else echo "$1"; fi ;;
-    *) echo "$1" ;;
-  esac
-}
 
 # ---- job.conf: only known keys, only safe characters
 [ -r "$JOB" ] || { : >"$STATUS"; echo "LUMENINST_FAIL - bad_job no job.conf" >>"$STATUS"; exit 1; }
@@ -189,12 +169,6 @@ probe)
   kv snap_devs "$(snap_devs)"
   kv data_free_kib "$(free_kib "$DATA")"
   kv super_kib "$(blk_kib super)"
-  kv media_rw "$(ls "$MEDIA_RW" 2>/dev/null | tr '\n' ',')"
-  if [ -n "$J_IMG" ]; then
-    p=$(dev_path "$J_IMG")
-    kv img_path "$p"
-    if [ -r "$p" ] && [ "$(fsize "$p")" = "$J_IMG_SIZE" ]; then kv img_readable 1; else kv img_readable 0; fi
-  fi
   done_
   ;;
 
@@ -209,7 +183,6 @@ install)
   [ "$(prop ro.gsid.image_running)" = 1 ] && fail trial_running
   gsi_installed && fail trial_installed "remove the installed trial first"
   ota_pending && fail ota_pending
-  J_IMG=$(dev_path "$J_IMG"); J_TAIL=$(dev_path "$J_TAIL")
   say "image $J_IMG"
   [ -r "$J_IMG" ] && [ -r "$J_TAIL" ] || fail files "image or tail missing"
   [ "$(fsize "$J_IMG")" = "$J_IMG_SIZE" ] || fail files "image size $(fsize "$J_IMG") != $J_IMG_SIZE"
