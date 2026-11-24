@@ -17,8 +17,8 @@
 #   enable   arm an installed trial for one more boot (MODEL as for install)
 #   remove   gsi_tool wipe (refused while the trial runs)
 #   reboot   sync + reboot (only when the user pressed Restart)
-#   dump     read only: the stock system info the user agreed to send (about 100 MB with the stock settings app the
-#            app adds itself). Runs every line of dump_table below (getprop, the partition table, dumpsys of every
+#   dump     read only: the stock system info the user agreed to send (a few MB in the zip, the app adds the stock
+#            settings app without its media for a firmware the catalog does not know). Runs every line of dump_table below (getprop, the partition table, dumpsys of every
 #            service we study a unit with, pm lists, logcat -b all, /proc and /sys reads, the vendor and XGIMI config
 #            text files, the stock settings app's own settings), one output file each in $HERE/dump (capped, readable
 #            by the app), plus commands.txt (name, exit code, bytes, seconds, command). SETTINGS_PKG: the stock settings
@@ -142,6 +142,8 @@ write_allowed() {
 case "$ACTION" in
 probe)
   kv model "$(model)"
+  # the serial stays on the unit: the Sparks card sends only its hash (apps/core/lumen-contrib)
+  kv serial "$(prop ro.serialno)"
   kv board "$(prop ro.boot.hardware)"
   kv stock "$(prop ro.vendor.build.version.incremental)"
   kv product "$(prop ro.vendor.xgimi.product.name)"
@@ -259,39 +261,41 @@ media_router media_session meminfo overlay package power role sensorservice Surf
 uimode usb webviewupdate window diskstats devicestoragemonitor color_display media.metrics statusbar'
   # one line per output file: name|command (the command runs under sh -c, its output is capped by cap_of)
   dump_table() {
-    cat <<'EOF'
-getprop|getprop
-partitions|cat /proc/partitions
-by_name|@by_name
-lpdump|lpdump
-slot_hashes|@slot_hashes
-mounts|cat /proc/mounts; echo; df -k; echo; cat /proc/swaps
-cmdline|cat /proc/cmdline; echo; cat /proc/bootconfig
-kernel|cat /proc/version; uname -a; echo; cat /proc/modules; echo; getenforce; echo; cat /proc/filesystems
-cpu|cat /proc/cpuinfo; echo; cat /proc/meminfo; echo; cat /proc/loadavg /proc/uptime; for c in /sys/devices/system/cpu/cpu[0-9]*; do echo "$c $(cat $c/cpufreq/scaling_cur_freq $c/cpufreq/scaling_max_freq $c/cpufreq/scaling_governor 2>/dev/null | tr '\n' ' ')"; done
-proc|for f in interrupts devices iomem misc buddyinfo vmstat zoneinfo asound/cards asound/pcm asound/devices bus/input/devices; do echo "== /proc/$f"; cat /proc/$f; done
-sys|@sys
-dmesg|dmesg
-logcat|logcat -d -b all -v threadtime
-packages|pm list packages -f -U -i --show-versioncode; echo; echo disabled:; pm list packages -d; echo; pm list features; echo; pm list libraries; echo; pm list instrumentation
-permissions|pm list permissions -g -f
-services|service list; echo; dumpsys -l; echo; lshal; echo; lshal -itrpc --neat
-processes|ps -A -o USER,PID,PPID,VSZ,RSS,WCHAN,NAME; echo; ps -A -T -o PID,TID,NAME
-xgimi_packages|for p in $(pm list packages | sed -n 's/^package:\(com\.xgimi\..*\)$/\1/p'); do echo "== $p"; dumpsys package "$p" | head -c 262144; done
-settings|for n in global system secure; do echo "== $n"; settings list $n; done
-settings_app|@settings_app
-build_props|for f in /system/build.prop /vendor/build.prop /odm/build.prop /odm/etc/build.prop /vendor/odm/etc/build.prop /product/etc/build.prop /system_ext/etc/build.prop /vendor_dlkm/etc/build.prop /vendor/etc/xgimimodelname/*/build.prop; do [ -f "$f" ] && { echo "== $f"; cat "$f"; }; done
-init|ls -lR /system/etc/init /vendor/etc/init /odm/etc/init /product/etc/init /system_ext/etc/init; for f in /system/etc/init/hw/*.rc /system/etc/init/*.rc /vendor/etc/init/*.rc /vendor/etc/init/hw/*.rc /odm/etc/init/*.rc /product/etc/init/*.rc /system_ext/etc/init/*.rc; do [ -f "$f" ] && { echo "== $f"; cat "$f"; }; done
-vintf|for f in /vendor/etc/vintf/*.xml /vendor/etc/vintf/manifest/*.xml /odm/etc/vintf/*.xml /odm/etc/vintf/manifest/*.xml /system/etc/vintf/*.xml /system/etc/vintf/manifest/*.xml; do [ -f "$f" ] && { echo "== $f"; cat "$f"; }; done
-vendor_configs|@configs /vendor/etc /odm/etc /system/etc/permissions /system/etc/sysconfig /product/etc/permissions /product/etc/sysconfig /system_ext/etc/permissions
-tvconfig|@tvconfig
-xgimiconfig|@xgimiconfig
-xgimi_files|awk '$2 ~ /xgimi|tvconfig|tvservice/ {print $2}' /proc/mounts | sort -u | while read -r m; do echo "== $m"; ls -lR "$m"; done
-net|ip -br link; echo; ip link
-audio_mixer|tinymix -D 0
-anr|ls -l /data/anr /data/tombstones; for f in $(ls -t /data/anr 2>/dev/null | head -4); do echo "== /data/anr/$f"; head -c 2097152 "/data/anr/$f"; done
-updates|ls -lR /metadata/ota /data/ota_package /data/misc/update_engine_log; for f in $(ls -t /data/misc/update_engine_log 2>/dev/null | head -2); do echo "== $f"; tail -c 1048576 "/data/misc/update_engine_log/$f"; done; echo; getprop | grep -E 'ota|update|slot'
-EOF
+    # printf, not a here-document: a shell writes a here-document to a temp file first, and where the root route may not
+    # (no /tmp on Android, a TMPDIR it cannot write) the table came out empty: commands.txt of 0 bytes and no root
+    # file in every dump received up to Installer 1.0.9
+    printf '%s\n' \
+      'getprop|getprop' \
+      'partitions|cat /proc/partitions' \
+      'by_name|@by_name' \
+      'lpdump|lpdump' \
+      'slot_hashes|@slot_hashes' \
+      'mounts|cat /proc/mounts; echo; df -k; echo; cat /proc/swaps' \
+      'cmdline|cat /proc/cmdline; echo; cat /proc/bootconfig' \
+      'kernel|cat /proc/version; uname -a; echo; cat /proc/modules; echo; getenforce; echo; cat /proc/filesystems' \
+      'cpu|cat /proc/cpuinfo; echo; cat /proc/meminfo; echo; cat /proc/loadavg /proc/uptime; for c in /sys/devices/system/cpu/cpu[0-9]*; do echo "$c $(cat $c/cpufreq/scaling_cur_freq $c/cpufreq/scaling_max_freq $c/cpufreq/scaling_governor 2>/dev/null | tr '\''\n'\'' '\'' '\'')"; done' \
+      'proc|for f in interrupts devices iomem misc buddyinfo vmstat zoneinfo asound/cards asound/pcm asound/devices bus/input/devices; do echo "== /proc/$f"; cat /proc/$f; done' \
+      'sys|@sys' \
+      'dmesg|dmesg' \
+      'logcat|logcat -d -b all -v threadtime' \
+      'packages|pm list packages -f -U -i --show-versioncode; echo; echo disabled:; pm list packages -d; echo; pm list features; echo; pm list libraries; echo; pm list instrumentation' \
+      'permissions|pm list permissions -g -f' \
+      'services|service list; echo; dumpsys -l; echo; lshal; echo; lshal -itrpc --neat' \
+      'processes|ps -A -o USER,PID,PPID,VSZ,RSS,WCHAN,NAME; echo; ps -A -T -o PID,TID,NAME' \
+      'xgimi_packages|for p in $(pm list packages | sed -n '\''s/^package:\(com\.xgimi\..*\)$/\1/p'\''); do echo "== $p"; dumpsys package "$p" | head -c 262144; done' \
+      'settings|for n in global system secure; do echo "== $n"; settings list $n; done' \
+      'settings_app|@settings_app' \
+      'build_props|for f in /system/build.prop /vendor/build.prop /odm/build.prop /odm/etc/build.prop /vendor/odm/etc/build.prop /product/etc/build.prop /system_ext/etc/build.prop /vendor_dlkm/etc/build.prop /vendor/etc/xgimimodelname/*/build.prop; do [ -f "$f" ] && { echo "== $f"; cat "$f"; }; done' \
+      'init|ls -lR /system/etc/init /vendor/etc/init /odm/etc/init /product/etc/init /system_ext/etc/init; for f in /system/etc/init/hw/*.rc /system/etc/init/*.rc /vendor/etc/init/*.rc /vendor/etc/init/hw/*.rc /odm/etc/init/*.rc /product/etc/init/*.rc /system_ext/etc/init/*.rc; do [ -f "$f" ] && { echo "== $f"; cat "$f"; }; done' \
+      'vintf|for f in /vendor/etc/vintf/*.xml /vendor/etc/vintf/manifest/*.xml /odm/etc/vintf/*.xml /odm/etc/vintf/manifest/*.xml /system/etc/vintf/*.xml /system/etc/vintf/manifest/*.xml; do [ -f "$f" ] && { echo "== $f"; cat "$f"; }; done' \
+      'vendor_configs|@configs /vendor/etc /odm/etc /system/etc/permissions /system/etc/sysconfig /product/etc/permissions /product/etc/sysconfig /system_ext/etc/permissions' \
+      'tvconfig|@tvconfig' \
+      'xgimiconfig|@xgimiconfig' \
+      'xgimi_files|awk '\''$2 ~ /xgimi|tvconfig|tvservice/ {print $2}'\'' /proc/mounts | sort -u | while read -r m; do echo "== $m"; ls -lR "$m"; done' \
+      'net|ip -br link; echo; ip link' \
+      'audio_mixer|tinymix -D 0' \
+      'anr|ls -l /data/anr /data/tombstones; for f in $(ls -t /data/anr 2>/dev/null | head -4); do echo "== /data/anr/$f"; head -c 2097152 "/data/anr/$f"; done' \
+      'updates|ls -lR /metadata/ota /data/ota_package /data/misc/update_engine_log; for f in $(ls -t /data/misc/update_engine_log 2>/dev/null | head -2); do echo "== $f"; tail -c 1048576 "/data/misc/update_engine_log/$f"; done; echo; getprop | grep -E '\''ota|update|slot'\'''
     for v in $DUMPSYS; do
       case "$v" in
         activity_*) echo "dumpsys_$v|dumpsys -t 60 activity ${v#activity_}" ;;
@@ -302,7 +306,8 @@ EOF
   }
   cap_of() {   # bytes one output file may keep (its end)
     case "$1" in
-      logcat|dumpsys_package|vendor_configs|tvconfig|xgimiconfig) echo 50331648 ;;
+      # the newest part of the log is what helps, configs and the package list a little more: a few MB in the zip
+      dumpsys_package|vendor_configs|tvconfig|xgimiconfig) echo 16777216 ;;
       *) echo 8388608 ;;
     esac
   }

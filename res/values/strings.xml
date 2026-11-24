@@ -159,15 +159,15 @@
     <string name="btn_busy_dump">Sending…</string>
     <string name="btn_send">Send</string>
     <string name="dump_title">Send projector info</string>
-    <string name="dump_body">We will collect information about the projector system and send it to us: model, firmware version, the XGIMI settings app, the app list, how the memory is divided, the system logs and settings. It is about 100 MB. It helps us make Lumen OS for your model and firmware. Passwords, Wi-Fi networks, accounts, keys and the serial number are not sent. Nothing on the projector changes. If the sending stops, press the button again and it goes on from where it stopped. Send it?</string>
+    <string name="dump_body">We will collect information about the projector system and send it to us: model, firmware version, the app list, how the memory is divided, the system logs and settings, and for a firmware we do not have yet the XGIMI settings app without its pictures and videos. It is usually a few MB, up to about 25 MB for a new firmware. The screen shows how much is left. It helps us make Lumen OS for your model and firmware. Passwords, Wi-Fi networks, accounts, keys and the serial number are not sent. Nothing on the projector changes. If the sending stops, press the button again and it goes on from where it stopped. Send it?</string>
     <string name="msg_dump_collecting">Collecting the projector info</string>
     <string name="msg_dump_no_root">No system access. Only the basic info goes out.</string>
     <string name="msg_dump_no_space">Not enough free memory on the projector: %1$s MB free, %2$s MB needed. Delete some apps or files and try again.</string>
     <string name="msg_dump_resuming">Going on with the info collected before, %1$s MB</string>
     <string name="msg_dump_sending">Sending: %1$s of %2$s MB</string>
-    <string name="msg_dump_sent">Sent. Your code is %1$s. Tell it to us if you write to us.</string>
+    <string name="msg_dump_sent">Sent. Report number %1$s. Give it to us if you write to us.</string>
     <string name="msg_dump_failed">Not sent (%1$s). Nothing changed. Try again later.</string>
-    <string name="msg_dump_paused">Not sent yet (%1$s). Press Send info again and it goes on from where it stopped.</string>
+    <string name="msg_dump_paused">Not sent yet (%1$s). Press the same button again and it goes on from where it stopped.</string>
     <!-- the download's speed and the time left under the progress bar (the texts of the Lumen OS updater) -->
     <string name="dl_rate">%1$s/s · %2$s</string>
     <plurals name="dl_eta">

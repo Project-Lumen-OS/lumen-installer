@@ -39,7 +39,7 @@ import java.util.Properties;
  *            (never remembered), then the newest trial build of the model runs the same steps. The install from the
  *            trial stays closed (the in-trial installer refuses that version itself), the catalog's own refusals, the
  *            board, orange and the root probe's model checks stay. An unknown model code never gets the choice.
- *   dump     the stock system info (StockDump, about 100 MB): the stock settings app, the read-only root commands of
+ *   dump     the stock system info (StockDump, a few MB, up to about 25 MB for a new firmware): the stock settings app, the read-only root commands of
  *            the script's dump table and what the app reads itself, personal data removed, sent in parts to our report
  *            server (PartUpload), going on after a break where it stopped. No writes outside the app's own dirs. The
  *            full firmware copy to a USB stick is LumenDump's, not this app's.
@@ -462,6 +462,8 @@ public final class Engine {
         if (pr == null) return fail(InstallStep.CHECK, Msg.ROOT_UNAVAILABLE);
         if (!pr.done) return fail(InstallStep.CHECK, rootMsg(pr), rootArgs(pr));
         if (!m.code.equals(pr.kv("model"))) return fail(InstallStep.CHECK, Msg.ROOT_FAILED, "model " + pr.kv("model"));
+        String sn = pr.kv("serial");
+        if (sn != null && sn.matches(SERIAL) && !sn.equals("unknown")) unitSerial = sn;
         // the stock really is this model's (the catalog says): its product name and its own config folder
         String prod = pr.kv("product");
         if (m.product != null && prod != null && !prod.isEmpty() && !prod.equals(m.product)) {
@@ -754,6 +756,10 @@ public final class Engine {
         return d != null && d.verdict != Msg.IN_TRIAL && d.verdict != Msg.ALREADY_LUMEN && d.verdict != Msg.APP_UPDATE_OFFERED;
     }
 
+    /** the serial a root probe read (memory only: the Sparks card keeps it for its own hash, it is never sent) */
+    public volatile String unitSerial = "";
+    static final String SERIAL = "[A-Za-z0-9._-]{4,40}";
+
     /** The random id of this app's reports (not the serial), made once. */
     String reportInstallId() {
         String id = state("dump.install");
@@ -802,7 +808,7 @@ public final class Engine {
     }
 
     /**
-     * The stock system info (about 100 MB): the stock settings app's APK files, what the app reads itself
+     * The stock system info (a few MB, up to about 25 MB for a firmware the catalog does not know): the stock settings app's APK files, what the app reads itself
      * (Host.facts), the read-only root commands of the script's dump table (when the root route answers), personal
      * data removed (StockDump), sent in parts to our report server (PartUpload). A zip that did not go out stays in the
      * app's dir with its upload id, and the next press goes on where the upload stopped (also after a restart of the
@@ -831,13 +837,15 @@ public final class Engine {
                 "dump", state("dump.serial"), cfg.allowLocalHttp);
         boolean choked = "1".equals(state("dump.choked"));
         long[] shown = { -1 };
+        Rate rate = new Rate();
         try {
             String got = u.send(dumpUrls(p), zip, state("dump.upload"), choked, (sent, t) -> {
+                long sp = rate.at(System.currentTimeMillis(), sent);
                 if (sent >> 20 != shown[0]) {
                     shown[0] = sent >> 20;
                     l.message(Msg.DUMP_SENDING, String.valueOf(sent >> 20), mb(t));
-                    l.progress(null, sent, t);
                 }
+                l.progress(null, sent, t, sp);
                 return !stop;
             });
             set("dump.code", got);
@@ -868,6 +876,31 @@ public final class Engine {
         }
     }
 
+    /** The speed of an upload for the minutes left: bytes per second over the last WINDOW_MS (0 until MIN_MS passed,
+     *  a resumed upload counts from its first answer, not from zero). */
+    public static final class Rate {
+        public static final long WINDOW_MS = 20_000, MIN_MS = 3_000;
+        private final java.util.ArrayDeque<long[]> seen = new java.util.ArrayDeque<>();
+
+        public long at(long now, long sent) {
+            seen.addLast(new long[] { now, sent });
+            while (seen.size() > 2 && now - seen.peekFirst()[0] > WINDOW_MS) seen.pollFirst();
+            long[] first = seen.peekFirst();
+            long ms = now - first[0];
+            return ms < MIN_MS ? 0 : (sent - first[1]) * 1000 / ms;
+        }
+    }
+
+    /** the signed catalog lists this model's stock version (as a build's base or refused): the base has this firmware's
+     *  files already, so the stock settings app is not sent again (the same file on every unit of a firmware) */
+    boolean stockKnown() {
+        if (det == null || det.model == null || det.stock.isEmpty()) return false;
+        if (det.model.refused.containsKey(det.stock)) return true;
+        for (String v : det.model.stockVersions()) if (v.equalsIgnoreCase(det.stock)) return true;
+        for (String v : det.model.refused.keySet()) if (v.equalsIgnoreCase(det.stock)) return true;
+        return false;
+    }
+
     /** makes the zip and keeps its upload state; false (said why) when it could not be made */
     private boolean dumpCollect(File zip, Map<String, String> p, String code, String stock) {
         l.message(Msg.DUMP_COLLECTING);
@@ -875,8 +908,10 @@ public final class Engine {
         for (String[] f : host.facts()) items.add(StockDump.Item.text("app/" + f[0], f[1]));
         String spkg = settingsPackage();
         long apks = 0;
+        boolean known = stockKnown();
         for (File f : spkg.isEmpty() ? java.util.Collections.<File>emptyList() : host.apkFiles(spkg)) {
-            items.add(StockDump.Item.binary("apk/" + spkg + "/" + f.getName(), f));
+            // a firmware the base does not have: its code and texts without pictures, videos and large libraries
+            if (!known) items.add(StockDump.Item.slim("apk/" + spkg + "/" + StockDump.slimName(f.getName()), f));
             apks += f.length();
         }
         Root.Job job = new Root.Job("dump", Root.newNonce());
@@ -915,7 +950,8 @@ public final class Engine {
                 .append("verdict: ").append(det == null ? "-" : det.verdict).append('\n')
                 .append("catalog: ").append(det == null ? 0 : det.catalogSerial).append('\n')
                 .append("root: ").append(rooted ? "yes" : "no").append('\n')
-                .append("settings app: ").append(spkg.isEmpty() ? "-" : spkg).append(" (").append(apks).append(" bytes)\n")
+                .append("settings app: ").append(spkg.isEmpty() ? "-" : spkg).append(" (").append(apks).append(" bytes, ")
+                .append(spkg.isEmpty() ? "-" : known ? "not sent: the catalog knows this firmware" : "sent without media").append(")\n")
                 .append("made: ").append(day(System.currentTimeMillis() / 1000)).append('\n')
                 .append("files: ").append(items.size()).append('\n');
         try {

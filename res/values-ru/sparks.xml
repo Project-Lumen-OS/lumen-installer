@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sparks_send_info">Этой прошивки ещё нет в базе Lumen. Отправьте сведения о системе и получите Вспышку</string>
-    <string name="sparks_code">Ваша Вспышка. Отсканируйте код телефоном или введите его в боте @Lumen_OS_Bot</string>
-    <string name="sparks_waiting">Вспышка придёт после проверки</string>
+    <string name="sparks_send_info">Этой прошивки ещё нет в базе Lumen. Нажмите ниже Отправить отчёт за Вспышку: мы получим сведения о системе, а вы Вспышку</string>
+    <string name="sparks_btn_report">Отправить отчёт за Вспышку</string>
+    <string name="sparks_title_code">Ваша Вспышка за этот проектор</string>
+    <string name="sparks_steps">1. Откройте @Lumen_OS_Bot в Telegram на телефоне\n2. Отправьте ему /spark %1$s или отсканируйте QR код</string>
+    <string name="sparks_waiting">Вспышка придёт после проверки отчёта</string>
+    <string name="sparks_received">Получен %1$s.</string>
+    <string name="sparks_until">Действует до %1$s. Код останется на этом экране</string>
+    <string name="sparks_taken">Вы уже получили Вспышку за этот проектор. Ваш код %1$s, получен %2$s</string>
+    <string name="sparks_taken_nocode">Вы уже получили Вспышку за этот проектор %1$s</string>
     <string name="sparks_installed_before">На этом проекторе Lumen OS уже ставили, за установку Вспышки нет</string>
 </resources>

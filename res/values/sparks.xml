@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The Sparks card (contrib/on/ContribCard.java), in every build unless the switch LI_CONTRIB=0. -->
 <resources>
-    <string name="sparks_send_info">This firmware is not in the Lumen base yet. Send the system info and get a Spark</string>
-    <string name="sparks_code">Your Spark. Scan the code with your phone or enter it in the bot @Lumen_OS_Bot</string>
-    <string name="sparks_waiting">The Spark arrives after a check</string>
+    <string name="sparks_send_info">This firmware is new to Lumen. Press Send a report for a Spark below: we get the system info and you get a Spark</string>
+    <string name="sparks_btn_report">Send a report for a Spark</string>
+    <string name="sparks_title_code">Your Spark for this projector</string>
+    <string name="sparks_steps">1. Open @Lumen_OS_Bot in Telegram on your phone\n2. Send it /spark %1$s or scan the QR code</string>
+    <string name="sparks_waiting">The Spark arrives after we check the report</string>
+    <string name="sparks_received">Received %1$s.</string>
+    <string name="sparks_until">Works until %1$s. The code stays on this screen</string>
+    <string name="sparks_taken">You already got a Spark for this projector. Your code %1$s, received on %2$s</string>
+    <string name="sparks_taken_nocode">You already got a Spark for this projector on %1$s</string>
     <string name="sparks_installed_before">Lumen OS was installed on this projector before, so the install earns no Spark</string>
 </resources>

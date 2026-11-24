@@ -22,14 +22,16 @@ import org.lumen.report.PropFilter;
 import org.lumen.report.Scrubber;
 
 /**
- * The stock system info a user may send from the Installer (Engine.dump), about 100 MB: the texts of the script's dump
- * table (root), the texts of Host.facts (no root) and the stock settings app's APK files. Every text is cleaned before
+ * The stock system info a user may send from the Installer (Engine.dump): the texts of the script's dump table (root),
+ * the texts of Host.facts (no root) and, for a firmware the catalog does not know, the stock settings app's APK files
+ * without their pictures, videos and large libraries (slim: about a third of the APK, its code and texts, the left
+ * out entries listed inside). A few MB, up to about 25 MB with a slim APK. Every text is cleaned before
  * it leaves the projector with the problem report rules of apps/core/lumen-report: a getprop, settings or app
  * preference key that names a serial, an address, a network, an account, a place or a secret loses its value
  * (PropFilter.denied and the lists below), Bluetooth device names and what a media session plays are removed, and
  * every line passes the Scrubber with the unit's serial and those values as literals. Large texts are read and cleaned
- * in parts, so memory stays small. The APK files go into the zip as they are (the system's own files, the same on
- * every unit of a firmware). Plain Java.
+ * in parts, so memory stays small. The APK files are the system's own files, the same on every unit of a firmware.
+ * Plain Java.
  */
 public final class StockDump {
     private StockDump() {}
@@ -62,24 +64,34 @@ public final class StockDump {
             "(?i)(serial|(^|[._])sn($|[._])|device_?name|bt_?name|bluetooth.?name|hostname|account|e_?mail|user_?name|owner"
             + "|android_?id|gsf|uuid|ssid)");
 
-    /** One entry of the zip: a text (app side), a text file root wrote (read in parts) or a binary file (an APK). */
+    /** entries of an APK the slim copy leaves out: pictures, videos, sounds and fonts (by name ending), the signature
+     *  folder and native libraries over LIB_MAX (third party engines such as an animation player) */
+    static final Pattern MEDIA = Pattern.compile("(?i).*\\.(png|webp|jpe?g|gif|bmp|mp4|webm|mkv|3gp|pag|mp3|ogg|wav|m4a|aac|flac|ttf|otf|ttc|svga)$");
+    static final long LIB_MAX = 2L << 20;
+    static final String LEFT_OUT = "lumen-left-out.txt";
+
+    /** One entry of the zip: a text (app side), a text file root wrote (read in parts), a binary file or an APK sent slim. */
     public static final class Item {
         public final String name, text;
         public final File file;
-        public final boolean binary;
+        public final boolean binary, slim;
 
-        private Item(String name, String text, File file, boolean binary) {
+        private Item(String name, String text, File file, boolean binary, boolean slim) {
             this.name = name;
             this.text = text;
             this.file = file;
             this.binary = binary;
+            this.slim = slim;
         }
 
-        public static Item text(String name, String text) { return new Item(name, text, null, false); }
+        public static Item text(String name, String text) { return new Item(name, text, null, false, false); }
 
-        public static Item textFile(String name, File f) { return new Item(name, null, f, false); }
+        public static Item textFile(String name, File f) { return new Item(name, null, f, false, false); }
 
-        public static Item binary(String name, File f) { return new Item(name, null, f, true); }
+        public static Item binary(String name, File f) { return new Item(name, null, f, true, false); }
+
+        /** an APK without its media (slim), stored in the zip under name */
+        public static Item slim(String name, File f) { return new Item(name, null, f, true, true); }
 
         long size() { return text != null ? text.length() : file.length(); }
     }
@@ -210,7 +222,16 @@ public final class StockDump {
                 if (it.binary && (size > APK_MAX || cnt.n + size > ZIP_MAX)) { r.left.add(it.name + " " + size + " bytes, too large"); continue; }
                 if (!it.binary && (r.textBytes >= TEXT_MAX || cnt.n >= ZIP_MAX - (1 << 20))) { r.left.add(it.name + " " + size + " bytes, the zip is full"); continue; }
                 long before = cnt.n;
-                if (it.binary) stored(z, it.name, it.file);
+                if (it.slim) {
+                    File tmp = new File(dir == null ? new File(".") : dir, "slim.tmp");
+                    try {
+                        long[] s2 = slim(it.file, tmp);
+                        r.left.add(it.name + " " + s2[1] + " entries (" + s2[2] + " bytes) of pictures, videos and large libraries, listed in its " + LEFT_OUT);
+                        stored(z, it.name, tmp);
+                    } finally {
+                        tmp.delete();
+                    }
+                } else if (it.binary) stored(z, it.name, it.file);
                 else if (it.text != null) {
                     String t = it.text.length() > FILE_MAX ? it.text.substring(it.text.length() - FILE_MAX) : it.text;
                     r.textBytes += t.length();
@@ -252,6 +273,51 @@ public final class StockDump {
         }
         z.closeEntry();
         return read;
+    }
+
+    /** the name of an APK sent slim: Settings.apk becomes Settings.slim.apk (jadx and unzip open it as an APK) */
+    public static String slimName(String apk) {
+        return apk.endsWith(".apk") ? apk.substring(0, apk.length() - 4) + ".slim.apk" : apk + ".slim.apk";
+    }
+
+    /** true: the slim copy of an APK leaves this entry out */
+    static boolean leftOut(String name, long size) {
+        return name.startsWith("META-INF/") || MEDIA.matcher(name).matches() || (name.startsWith("lib/") && size > LIB_MAX);
+    }
+
+    /**
+     * Writes the slim copy of an APK to `to`: every entry but the left out ones (leftOut), deflated at level 9 (an APK
+     * keeps its code uncompressed, so this alone saves about half of it), and LEFT_OUT listing each left out entry
+     * with its size and CRC. Returns {entries kept, entries left out, bytes left out}.
+     */
+    static long[] slim(File apk, File to) throws IOException {
+        long[] n = new long[3];
+        StringBuilder left = new StringBuilder();
+        byte[] buf = new byte[64 * 1024];
+        try (java.util.zip.ZipFile in = new java.util.zip.ZipFile(apk); ZipOutputStream out = new ZipOutputStream(new FileOutputStream(to))) {
+            out.setLevel(9);
+            java.util.Enumeration<? extends ZipEntry> en = in.entries();
+            while (en.hasMoreElements()) {
+                ZipEntry e = en.nextElement();
+                if (e.isDirectory()) continue;
+                if (leftOut(e.getName(), e.getSize())) {
+                    left.append(e.getName()).append(' ').append(e.getSize()).append(' ').append(Long.toHexString(e.getCrc())).append('\n');
+                    n[1]++;
+                    n[2] += e.getSize();
+                    continue;
+                }
+                out.putNextEntry(new ZipEntry(e.getName()));
+                try (InputStream i = in.getInputStream(e)) {
+                    for (int k; (k = i.read(buf)) > 0; ) out.write(buf, 0, k);
+                }
+                out.closeEntry();
+                n[0]++;
+            }
+            out.putNextEntry(new ZipEntry(LEFT_OUT));
+            out.write(("left out of " + apk.getName() + " (" + apk.length() + " bytes): name size crc32\n" + left).getBytes(StandardCharsets.UTF_8));
+            out.closeEntry();
+        }
+        return n;
     }
 
     /** an APK as it is (it is compressed already): stored, its CRC first */

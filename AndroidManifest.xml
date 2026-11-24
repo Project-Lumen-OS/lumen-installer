@@ -13,11 +13,13 @@
   1.0.8: the firmware card shows the FPGA firmware next to its type, problem reports try the new server address first.
   1.0.9: Lumen OS comes over the network only: no USB stick or LumenOS folder and no storage permission, a model that
   only a computer installs shows no build.
+  1.0.10: one Sparks code per projector kept on the start screen, the in-trial installer named Install Lumen OS for
+  good, smaller problem reports sent over several connections.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.lumen.installer"
-    android:versionCode="109"
-    android:versionName="1.0.9">
+    android:versionCode="110"
+    android:versionName="1.0.10">
 
     <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="29" />
 

@@ -26,7 +26,8 @@ import javax.net.ssl.HttpsURLConnection;
 
 /**
  * A zip sent in parts (POST &lt;report address&gt;/part, tools/stats/server/lumen_reports.py), each part on a connection
- * of its own, LANES parts on their way at once. Networks in Russia freeze every connection to a Cloudflare address
+ * of its own, LANES parts on their way at once, LANES_CHOKED on a choked network (there each small part waits mostly
+ * for its own TLS handshake, so more of them at once carry more: about 2.5 MB a minute with 4 on a Russian home line). Networks in Russia freeze every connection to a Cloudflare address
  * after about 20 KB: there only parts of PART bytes arrive (the TLS handshake plus one part stays under that), so a
  * dump of about 100 MB is some 8500 parts. Elsewhere and on a direct report address parts of PART_BIG bytes go
  * through. An upload starts with PART_BIG and drops to PART for good at the first part that gets no answer (choked()
@@ -45,6 +46,8 @@ public final class PartUpload {
     public static final int PART_BIG = 512 * 1024;
     /** parts on their way at once, each on its own connection */
     static final int LANES = 4;
+    /** the same once the network is choked (the report server takes 12 parts at once and 16 connections per sender) */
+    static final int LANES_CHOKED = 8;
     /** sends of one part before the address counts as failed */
     static final int TRIES = 6;
     /** one part: this much plus a millisecond per 32 bytes, then its connection is cut */
@@ -140,6 +143,7 @@ public final class PartUpload {
         final Progress progress;
         final long total;
         final ArrayDeque<long[]> again = new ArrayDeque<>();   // {offset, length, tries}
+        final List<Thread> lanes = Collections.synchronizedList(new ArrayList<>());
         long cursor, base, acked;
         int busy;
         String code;
@@ -161,14 +165,9 @@ public final class PartUpload {
             Answer q = post(url, null, 0, total, sha, uploadId);
             if (q.code != null) return q.code;
             base = cursor = Math.max(0, Math.min(q.have, total));
-            List<Thread> lanes = new ArrayList<>();
-            for (int i = 0; i < LANES; i++) {
-                Thread t = new Thread(this::lane, "lumen-part-" + i);
-                t.setDaemon(true);
-                lanes.add(t);
-                t.start();
-            }
-            for (Thread t : lanes) {
+            grow();
+            for (int i = 0; i < lanes.size(); i++) {   // a lane may add lanes when it finds the network choked
+                Thread t = lanes.get(i);
                 try {
                     t.join();
                 } catch (InterruptedException e) {
@@ -180,6 +179,18 @@ public final class PartUpload {
             if (fatal != null) throw fatal;
             if (code != null) return code;
             throw new ReportUploader.UploadException(ReportFailure.SERVER, "no code at the end");
+        }
+
+        /** starts lanes up to LANES, or LANES_CHOKED once the network is choked */
+        private void grow() {
+            synchronized (lanes) {
+                for (int i = lanes.size(); i < (choked ? LANES_CHOKED : LANES); i++) {
+                    Thread t = new Thread(this::lane, "lumen-part-" + i);
+                    t.setDaemon(true);
+                    lanes.add(t);
+                    t.start();
+                }
+            }
         }
 
         /** the next part to send, null when there is none now and none will come */
@@ -246,6 +257,7 @@ public final class PartUpload {
                 err = new ReportUploader.UploadException(ReportFailure.REJECTED, "zip: " + e.getMessage());
             }
             long wait = 0;
+            boolean nowChoked = false;
             synchronized (this) {
                 busy--;
                 if (code != null || fatal != null) {
@@ -267,6 +279,7 @@ public final class PartUpload {
                 } else if (w[1] > PART && !choked) {
                     // no answer to a large part: a network that freezes a connection after a few KB, small parts from now on
                     choked = true;
+                    nowChoked = true;
                     for (long o = w[0]; o < w[0] + w[1]; o += PART) again.add(new long[] { o, Math.min(PART, w[0] + w[1] - o), 0 });
                 } else if (++w[2] >= TRIES) {
                     fatal = err;
@@ -280,6 +293,7 @@ public final class PartUpload {
                 }
                 notifyAll();
             }
+            if (nowChoked) grow();
             if (wait > 0) Thread.sleep(wait);
         }
     }

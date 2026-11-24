@@ -127,7 +127,7 @@ public class MainActivity extends Activity {
         contribCard.setBackground(round(CARD, dp(18)));
         contribCard.setVisibility(View.GONE);
         left.addView(contribCard, lp(0, dp(12), 0, 0));
-        contrib = new ContribCard(this, contribCard);
+        contrib = new ContribCard(this, contribCard, this::render);
         forceBox = new LinearLayout(this);
         forceBox.setOrientation(LinearLayout.VERTICAL);
         forceRow = new LinearLayout(this);
@@ -337,7 +337,7 @@ public class MainActivity extends Activity {
      *  (the updater's texts), the line kept free until the first speed is known so the card does not jump. */
     void renderRate(Snap s) {
         int dl = InstallStep.DOWNLOAD.ordinal();
-        boolean running = s.busy && s.curStep == dl && s.steps[dl] == StepStatus.RUNNING && s.total > 0;
+        boolean running = s.busy && s.total > 0 && (s.curStep == dl && s.steps[dl] == StepStatus.RUNNING || s.task == Task.DUMP);
         long sp = s.speed, left = s.total - s.done;
         rate.setVisibility(!running ? View.GONE : sp > 0 && left > 0 ? View.VISIBLE : View.INVISIBLE);
         if (!running || sp <= 0 || left <= 0) return;
@@ -362,6 +362,9 @@ public class MainActivity extends Activity {
         else if (s.prepared && s.canStart) key = "ready";
         else key = s.steps[0] == StepStatus.WAITING ? "idle" : "continue";
         renderOptions(s, key);
+        // a firmware new to the base and no report from this projector yet: the report button leads (Sparks card)
+        boolean spark = contrib.reportFirst();
+        if (spark && key.matches("idle|continue|refused|nocatalog")) key += ":spark";
         if (key.equals(buttonKey)) { linkFocus(); return; }
         buttonKey = key;
         buttons.removeAllViews();
@@ -372,8 +375,9 @@ public class MainActivity extends Activity {
             first = add(busyLabel(held), v -> { });
             if (key.endsWith(":pause")) add(R.string.btn_pause, v -> startService(WorkService.task(this, "stop"))).setTag(OFFERED);
             first.requestFocus();
-        } else if ("nocatalog".equals(key)) {
+        } else if (key.startsWith("nocatalog")) {
             // no verified catalog yet: ask again
+            Button dump = spark ? addDumpButtons(d) : null;
             first = add(R.string.btn_retry, v -> {
                 if (Snap.I.busy) return;
                 act(Task.CATALOG);
@@ -381,22 +385,23 @@ public class MainActivity extends Activity {
                 Snap.I.seq++;
                 render();
             });
-            addDumpButtons(d);
-        } else if ("refused".equals(key)) {
+            if (dump != null) first = dump;
+            else addDumpButtons(d);
+        } else if (key.startsWith("refused")) {
             // an unknown model or stock version: the system info helps us make a build for it
             first = addDumpButtons(d);
-        } else if ("appupdate".equals(key)) {
+        } else if (key.startsWith("appupdate")) {
             // an installed Lumen OS whose update app the catalog fixes: that app first, then Lumen OS updates itself
             first = add(R.string.btn_app_update, v -> act(Task.APP_UPDATE));
-        } else if ("appdone".equals(key)) {
+        } else if (key.startsWith("appdone")) {
             first = add(R.string.btn_open_updater, v -> openUpdater());
-        } else if ("idle".equals(key)) {
-            first = add(R.string.btn_prepare, v -> act(Task.PREPARE));
-            addDumpButtons(d);
-        } else if ("continue".equals(key)) {
-            first = add(R.string.btn_continue, v -> act(Task.PREPARE));
-            addDumpButtons(d);
-        } else if ("ready".equals(key)) {
+        } else if (key.startsWith("idle") || key.startsWith("continue")) {
+            Button dump = spark ? addDumpButtons(d) : null;
+            if (key.startsWith("idle")) first = add(R.string.btn_prepare, v -> act(Task.PREPARE));
+            else first = add(R.string.btn_continue, v -> act(Task.PREPARE));
+            if (dump != null) first = dump;
+            else addDumpButtons(d);
+        } else if (key.startsWith("ready")) {
             String keep = getString(s.handover == 1 ? R.string.confirm_keep_yes : R.string.confirm_keep_no);
             String space = s.need.isEmpty() ? "" : " " + getString(R.string.confirm_space, Engine.gb(Engine.parseLongSafe(s.need)),
                     Engine.gb(Engine.parseLongSafe(s.free)));
@@ -405,17 +410,17 @@ public class MainActivity extends Activity {
             first = add(R.string.btn_start, v -> confirm(R.string.confirm_start_title,
                     getString(R.string.confirm_start_body) + " " + keep + space + only, R.string.btn_start, () -> act(Task.START)));
             add(R.string.btn_later, v -> finish());
-        } else if ("armed".equals(key)) {
+        } else if (key.startsWith("armed")) {
             first = add(R.string.btn_restart, v -> act(Task.RESTART));
             add(R.string.btn_later, v -> finish());
-        } else if ("ours".equals(key)) {
+        } else if (key.startsWith("ours")) {
             // a newer image (stick folder / release) replaces the old trial in one go: remove, prepare, start
             first = add(R.string.btn_replace, v -> confirm(R.string.confirm_start_title, getString(R.string.confirm_replace_body),
                     R.string.btn_replace, () -> act(Task.REPLACE)));
             add(R.string.btn_again, v -> act(Task.AGAIN));
             add(R.string.btn_remove, v -> confirm(R.string.confirm_remove_title, getString(R.string.confirm_remove_body),
                     R.string.btn_remove, () -> act(Task.REMOVE)));
-        } else if ("other".equals(key)) {
+        } else if (key.startsWith("other")) {
             first = add(R.string.btn_remove, v -> confirm(R.string.confirm_remove_title, getString(R.string.confirm_remove_body),
                     R.string.btn_remove, () -> act(Task.REMOVE)));
         }
@@ -516,7 +521,7 @@ public class MainActivity extends Activity {
     /** on the XGIMI system (not in a trial, not on Lumen OS): send the system info (the full firmware copy to a USB
      *  stick is LumenDump's) */
     Button addDumpButtons(Engine.Detection d) {
-        return Engine.dumpAllowed(d) ? add(R.string.btn_dump, v -> askDump()) : null;
+        return Engine.dumpAllowed(d) ? addTo(buttons, contrib.dumpLabel(getString(R.string.btn_dump)), v -> askDump()) : null;
     }
 
     /** Every button that starts a task comes here: the first press takes the gate and hands the task to the service,

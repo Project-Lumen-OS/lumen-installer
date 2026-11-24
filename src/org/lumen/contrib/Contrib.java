@@ -36,17 +36,33 @@ public final class Contrib {
     }
 
     public Claim send(Kind kind, String model, String version, String serial, String ref, long nowSeconds) {
+        if (kind == Kind.MINE) return Claim.OFFLINE;
         try {
-            byte[] body = ContribBody.build(kind, model, version, ContribBody.serialHash(serial), ref, nowSeconds, nonce());
-            Map<String, String> h = new LinkedHashMap<>();
-            h.put("Content-Type", "text/plain; charset=us-ascii");
-            h.put("X-Lumen-Key", Hex.b64url(signer.publicKey()));
-            h.put("X-Lumen-Sig", Hex.b64url(signer.sign(body)));
-            Reply r = net.post(base + "/v1/earn", body, h);
+            Reply r = signed("/v1/earn", kind, model, version, serial, ref, nowSeconds);
             return Claim.from(r.status, FlatJson.parse(r.body));
         } catch (IOException | GeneralSecurityException | RuntimeException e) {
             return Claim.OFFLINE;
         }
+    }
+
+    /** What this projector earned before, by its serial hash (a signed ask, no event). Every failure is OFFLINE. */
+    public Mine mine(String model, String version, String serial, long nowSeconds) {
+        try {
+            Reply r = signed("/v1/mine", Kind.MINE, model, version, serial, "", nowSeconds);
+            return Mine.from(r.status, FlatJson.parse(r.body));
+        } catch (IOException | GeneralSecurityException | RuntimeException e) {
+            return Mine.OFFLINE;
+        }
+    }
+
+    private Reply signed(String path, Kind kind, String model, String version, String serial, String ref, long now)
+            throws IOException, GeneralSecurityException {
+        byte[] body = ContribBody.build(kind, model, version, ContribBody.serialHash(serial), ref, now, nonce());
+        Map<String, String> h = new LinkedHashMap<>();
+        h.put("Content-Type", "text/plain; charset=us-ascii");
+        h.put("X-Lumen-Key", Hex.b64url(signer.publicKey()));
+        h.put("X-Lumen-Sig", Hex.b64url(signer.sign(body)));
+        return net.post(base + path, body, h);
     }
 
     /** The start screen: offer to send the system info only while the base lacks this firmware and it was not sent. */
