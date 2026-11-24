@@ -3,7 +3,7 @@
 An app for XGIMI projectors that brings [Lumen OS](https://github.com/Project-Lumen-OS/lumen-os) to the projector
 over the network, without a computer and without a USB cable. It reads the projector's model and looks it up in the signed list of Lumen OS builds. If a build
 for that model is published, the app offers it: the stable version, or the newest beta if you choose Beta. Every file is checked against its signature on the
-projector before it is used. You can try Lumen OS first: the XGIMI system and your files stay as they are.
+projector before it is used. You can try Lumen OS first in Lumen OS Live: the XGIMI system and your files stay as they are.
 
 Lumen OS always downloads over the projector's own internet connection, Wi-Fi or Ethernet. This app is the only
 way to install it. The XGIMI Play 6 is the one exception: it still installs with a computer, see its
