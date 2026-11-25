@@ -11,6 +11,30 @@ Lumen OS всегда скачивается через интернет сам�
 
 [English version](README.md)
 
+## Какие проекторы подходят
+
+<!-- models:installer:begin -->
+| Проектор | Код модели | Что предлагает Lumen Installer |
+|---|---|---|
+| XGIMI Z9X | G0082 | Lumen OS Live, Установить Lumen OS насовсем |
+| XGIMI Z9X HB | G0130, G0148 | Lumen OS Live, Установить Lumen OS насовсем |
+| XGIMI X50 Ultra | G0111 | Lumen OS Live, Установить Lumen OS насовсем |
+| XGIMI X50 Ultra Max | G0100 | Lumen OS Live, Установить Lumen OS насовсем |
+| XGIMI Play 6 | G0058 | С компьютера, не через Lumen Installer |
+| XGIMI AURA 3 Max | G0104 | только Lumen OS Live |
+| XGIMI MIRA 4K | G0109 | только Lumen OS Live |
+| XGIMI MIRA 4K Pro | G0110 | только Lumen OS Live |
+| XGIMI RS30 Pro | G0125 | только Lumen OS Live |
+| XGIMI RS30 Pro Max | G0124 | только Lumen OS Live |
+| XGIMI RS30 Ultra | G0114 | только Lumen OS Live |
+| XGIMI RS30 Ultra | G0170 | только Lumen OS Live |
+| XGIMI RS30 Ultra Max | G0115 | только Lumen OS Live |
+| XGIMI RS30 Ultra Max | G0155 | только Lumen OS Live |
+| XGIMI TITAN Noir | H0061 | только Lumen OS Live |
+| XGIMI TITAN Noir Max | H0063 | только Lumen OS Live |
+| XGIMI TITAN Noir Pro | H0062 | только Lumen OS Live |
+<!-- models:end -->
+
 ## Как поставить приложение
 
 1. Скачайте из [последнего релиза](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest) файл Lumen Installer с окончанием `.apk1`

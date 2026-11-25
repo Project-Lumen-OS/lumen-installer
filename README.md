@@ -11,6 +11,30 @@ way to install it. The XGIMI Play 6 is the one exception: it still installs with
 
 [Русская версия](README.ru.md)
 
+## Supported projectors
+
+<!-- models:installer:begin -->
+| Projector | Model code | What Lumen Installer offers |
+|---|---|---|
+| XGIMI Z9X | G0082 | Lumen OS Live, Install Lumen OS permanently |
+| XGIMI Z9X HB | G0130, G0148 | Lumen OS Live, Install Lumen OS permanently |
+| XGIMI X50 Ultra | G0111 | Lumen OS Live, Install Lumen OS permanently |
+| XGIMI X50 Ultra Max | G0100 | Lumen OS Live, Install Lumen OS permanently |
+| XGIMI Play 6 | G0058 | With a computer, not with Lumen Installer |
+| XGIMI AURA 3 Max | G0104 | Lumen OS Live only |
+| XGIMI MIRA 4K | G0109 | Lumen OS Live only |
+| XGIMI MIRA 4K Pro | G0110 | Lumen OS Live only |
+| XGIMI RS30 Pro | G0125 | Lumen OS Live only |
+| XGIMI RS30 Pro Max | G0124 | Lumen OS Live only |
+| XGIMI RS30 Ultra | G0114 | Lumen OS Live only |
+| XGIMI RS30 Ultra | G0170 | Lumen OS Live only |
+| XGIMI RS30 Ultra Max | G0115 | Lumen OS Live only |
+| XGIMI RS30 Ultra Max | G0155 | Lumen OS Live only |
+| XGIMI TITAN Noir | H0061 | Lumen OS Live only |
+| XGIMI TITAN Noir Max | H0063 | Lumen OS Live only |
+| XGIMI TITAN Noir Pro | H0062 | Lumen OS Live only |
+<!-- models:end -->
+
 ## Install the app
 
 1. Download the Lumen Installer file that ends in `.apk1` from the [latest release](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest)
