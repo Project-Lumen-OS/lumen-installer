@@ -24,6 +24,15 @@ Lumen OS всегда скачивается через интернет сам�
 | XGIMI AURA 3 Max | G0104 | только Lumen OS Live |
 | XGIMI MIRA 4K | G0109 | только Lumen OS Live |
 | XGIMI MIRA 4K Pro | G0110 | только Lumen OS Live |
+| XGIMI RS 20 | G0087 | только Lumen OS Live |
+| XGIMI RS 20 Plus | G0063 | только Lumen OS Live |
+| XGIMI RS 20 Plus Highlight | G0079 | только Lumen OS Live |
+| XGIMI RS 20 Plus New | G0086 | только Lumen OS Live |
+| XGIMI RS 20 Pro | G0088 | только Lumen OS Live |
+| XGIMI RS 20 Pro Master | G0077 | только Lumen OS Live |
+| XGIMI RS 20 Pro Max Highlight | G0089 | только Lumen OS Live |
+| XGIMI RS 20 Ultra | G0067 | только Lumen OS Live |
+| XGIMI RS 20 Ultra Master | G0078 | только Lumen OS Live |
 | XGIMI RS30 Pro | G0125 | только Lumen OS Live |
 | XGIMI RS30 Pro Max | G0124 | только Lumen OS Live |
 | XGIMI RS30 Ultra | G0114 | только Lumen OS Live |
