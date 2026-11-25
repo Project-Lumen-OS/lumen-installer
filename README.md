@@ -27,9 +27,9 @@ way to install it. The XGIMI Play 6 is the one exception: it still installs with
 | XGIMI RS30 Pro | G0125 | Lumen OS Live only |
 | XGIMI RS30 Pro Max | G0124 | Lumen OS Live only |
 | XGIMI RS30 Ultra | G0114 | Lumen OS Live only |
-| XGIMI RS30 Ultra | G0170 | Lumen OS Live only |
+| XGIMI RS30 Ultra Highlight | G0170 | Lumen OS Live only |
 | XGIMI RS30 Ultra Max | G0115 | Lumen OS Live only |
-| XGIMI RS30 Ultra Max | G0155 | Lumen OS Live only |
+| XGIMI RS30 Ultra Max Flagship | G0155 | Lumen OS Live only |
 | XGIMI TITAN Noir | H0061 | Lumen OS Live only |
 | XGIMI TITAN Noir Max | H0063 | Lumen OS Live only |
 | XGIMI TITAN Noir Pro | H0062 | Lumen OS Live only |
