@@ -1,4 +1,4 @@
-# Lumen Installer
+# Lumen OS Live
 
 Приложение для проекторов XGIMI, которое ставит [Lumen OS](https://github.com/Project-Lumen-OS/lumen-os) по сети, без
 компьютера и без кабеля USB. Оно узнаёт модель проектора и ищет её в подписанном списке сборок Lumen OS. Если сборка для этой модели
@@ -14,13 +14,13 @@ Lumen OS всегда скачивается через интернет сам�
 ## Какие проекторы подходят
 
 <!-- models:installer:begin -->
-| Проектор | Код модели | Что предлагает Lumen Installer |
+| Проектор | Код модели | Что предлагает Lumen OS Live |
 |---|---|---|
 | XGIMI Z9X | G0082 | Lumen OS Live, Установить Lumen OS насовсем |
 | XGIMI Z9X HB | G0130, G0148 | Lumen OS Live, Установить Lumen OS насовсем |
 | XGIMI X50 Ultra | G0111 | Lumen OS Live, Установить Lumen OS насовсем |
 | XGIMI X50 Ultra Max | G0100 | Lumen OS Live, Установить Lumen OS насовсем |
-| XGIMI Play 6 | G0058 | С компьютера, не через Lumen Installer |
+| XGIMI Play 6 | G0058 | С компьютера, не через Lumen OS Live |
 | XGIMI AURA 3 Max | G0104 | только Lumen OS Live |
 | XGIMI MIRA 4K | G0109 | только Lumen OS Live |
 | XGIMI MIRA 4K Pro | G0110 | только Lumen OS Live |
@@ -46,12 +46,12 @@ Lumen OS всегда скачивается через интернет сам�
 
 ## Как поставить приложение
 
-1. Скачайте из [последнего релиза](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest) файл Lumen Installer с окончанием `.apk1`
+1. Скачайте из [последнего релиза](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest) файл Lumen OS Live с окончанием `.apk1`
    и скопируйте его на флешку (FAT32 или exFAT). Флешка нужна только для приложения.
 2. Вставьте флешку в проектор, откройте файл в файловом менеджере XGIMI и подтвердите установку.
-3. Подключите проектор к интернету, откройте Lumen Installer и следуйте подсказкам на экране.
+3. Подключите проектор к интернету, откройте Lumen OS Live и следуйте подсказкам на экране.
 
-Приложение ставится поверх любой прежней версии Lumen Installer. Каким проекторам и версиям прошивки доступна Lumen
+Приложение ставится поверх любой прежней версии Lumen OS Live. Каким проекторам и версиям прошивки доступна Lumen
 OS, решает подписанный список сборок в [выпуске index](https://github.com/Project-Lumen-OS/lumen-installer/releases/tag/index),
 собранный из опубликованных [выпусков Lumen OS](https://github.com/Project-Lumen-OS/lumen-os/releases), а не приложение.
 Когда выходит сборка для нового проектора, то же приложение её предлагает. Проектор без сборки приложение не трогает.

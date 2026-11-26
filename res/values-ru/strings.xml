@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ui_lang">ru</string>
-    <string name="app_name">Lumen Installer</string>
-    <string name="title">Попробовать Lumen OS</string>
-    <string name="working">Готовим пробный запуск Lumen OS</string>
+    <string name="app_name">Lumen OS Live</string>
+    <string name="title">Lumen OS Live</string>
+    <string name="working">Готовим Lumen OS Live</string>
     <string name="versions_title">Версии прошивки</string>
     <string name="device_line">%1$s (%2$s), прошивка XGIMI %3$s</string>
     <string name="device_line_short">%1$s, прошивка XGIMI %2$s</string>
-    <string name="trial_info">Lumen OS запустится один раз, на пробу. Система XGIMI и ваши файлы останутся как есть. Следующий перезапуск после пробы вернёт систему XGIMI. Чтобы оставить Lumen OS, выберите «Установить» внутри пробного запуска. В пробном запуске звук и часть видео могут пока не работать. Пока установщик работает, он пользуется сервисным доступом XGIMI на проекторе. Не выключайте проектор из розетки.</string>
+    <string name="trial_info">Lumen OS запустится один раз как Lumen OS Live. Система XGIMI и ваши файлы останутся как есть. Следующий перезапуск после Lumen OS Live вернёт систему XGIMI. Чтобы оставить Lumen OS, выберите «Установить» внутри Lumen OS Live. В Lumen OS Live звук и часть видео могут пока не работать. Пока приложение готовит Lumen OS, оно пользуется сервисным доступом XGIMI на проекторе. Не выключайте проектор из розетки.</string>
 
     <string name="step_check">Проверка</string>
     <string name="step_download">Загрузка</string>
@@ -15,16 +15,16 @@
     <string name="step_prepare">Подготовка</string>
     <string name="step_start">Запуск</string>
 
-    <string name="btn_prepare">Подготовить пробный запуск</string>
+    <string name="btn_prepare">Подготовить Lumen OS Live</string>
     <string name="btn_pause">Пауза</string>
     <string name="btn_continue">Продолжить</string>
-    <string name="btn_start">Запустить Lumen OS</string>
+    <string name="btn_start">Запустить Lumen OS Live</string>
     <string name="btn_restart">Перезапустить</string>
     <string name="btn_later">Позже</string>
-    <string name="btn_replace">Поставить новую пробу</string>
-    <string name="confirm_replace_body">Старая проба удалится, новая Lumen OS скачается, подготовится и запустится. Система XGIMI останется как есть.</string>
-    <string name="btn_again">Запустить пробу снова</string>
-    <string name="btn_remove">Удалить пробный запуск</string>
+    <string name="btn_replace">Подготовить новую Lumen OS Live</string>
+    <string name="confirm_replace_body">Старая Lumen OS Live удалится, новая скачается, подготовится и запустится. Система XGIMI останется как есть.</string>
+    <string name="btn_again">Запустить Lumen OS Live снова</string>
+    <string name="btn_remove">Удалить Lumen OS Live</string>
     <string name="btn_cancel">Отмена</string>
     <string name="btn_back">Назад</string>
     <string name="btn_retry">Повторить</string>
@@ -34,18 +34,18 @@
     <string name="btn_busy_remove">Удаление…</string>
     <string name="btn_busy_restart">Перезапуск…</string>
 
-    <string name="confirm_start_title">Запустить Lumen OS на пробу?</string>
-    <string name="confirm_start_body">Пробный запуск хранится в памяти проектора в виде файлов. Система XGIMI не меняется. После перезапуска Lumen OS запустится один раз. Следующий перезапуск вернёт систему XGIMI.</string>
-    <string name="confirm_keep_yes">Чтобы оставить Lumen OS, выберите «Установить» внутри пробного запуска.</string>
-    <string name="confirm_keep_no">Эту версию Lumen OS на этом проекторе пока можно только попробовать. Устанавливаться из пробного запуска она ещё не умеет.</string>
-    <string name="confirm_remove_title">Удалить пробный запуск?</string>
-    <string name="confirm_remove_body">Файлы пробного запуска удалятся, и место освободится. Система XGIMI не меняется.</string>
+    <string name="confirm_start_title">Запустить Lumen OS Live?</string>
+    <string name="confirm_start_body">Lumen OS Live хранится в памяти проектора в виде файлов. Система XGIMI не меняется. После перезапуска Lumen OS запустится один раз. Следующий перезапуск вернёт систему XGIMI.</string>
+    <string name="confirm_keep_yes">Чтобы оставить Lumen OS, выберите «Установить» внутри Lumen OS Live.</string>
+    <string name="confirm_keep_no">Эта версия Lumen OS на этом проекторе пока работает только как Lumen OS Live. Устанавливаться из Lumen OS Live она ещё не умеет.</string>
+    <string name="confirm_remove_title">Удалить Lumen OS Live?</string>
+    <string name="confirm_remove_body">Файлы Lumen OS Live удалятся, и место освободится. Система XGIMI не меняется.</string>
 
     <string name="msg_supported">Lumen OS работает на этом проекторе.</string>
     <string name="msg_board_mismatch">Модель %1$s с железом %2$s нам незнакома. Она не поддерживается.</string>
     <string name="msg_already_lumen">На этом проекторе уже работает Lumen OS %1$s. Обновления приходят в самой Lumen OS.</string>
-    <string name="msg_in_trial">Сейчас Lumen OS работает на пробу. Перезапустите проектор, чтобы вернуться к системе XGIMI, или выберите «Установить» внутри пробного запуска.</string>
-    <string name="msg_not_orange">Этот проектор заблокирован (%1$s). Пробный запуск на нём невозможен.</string>
+    <string name="msg_in_trial">Вы сейчас в Lumen OS Live. Перезапустите проектор, чтобы вернуться к системе XGIMI, или выберите «Установить» внутри Lumen OS Live.</string>
+    <string name="msg_not_orange">Этот проектор заблокирован (%1$s). Lumen OS Live на нём не запустится.</string>
     <string name="msg_stock_unsupported">Прошивка XGIMI %1$s не поддерживается этой Lumen OS. Поддерживаются %2$s. Ничего не изменилось.</string>
     <string name="msg_model_stock_unsupported">Модель %1$s с прошивкой XGIMI %2$s не поддерживается. Lumen OS для этой модели работает только с %3$s. Ничего не изменилось.</string>
     <string name="msg_product_mismatch">Модель %1$s сообщает %2$s вместо %3$s. Её прошивка XGIMI от другой модели. Сначала верните родную прошивку XGIMI, это описано в инструкции. Ничего не изменилось.</string>
@@ -53,12 +53,12 @@
     <string name="msg_root_unavailable">Сервисный доступ XGIMI на проекторе не ответил. Для него нужна оригинальная прошивка XGIMI. Ничего не изменилось.</string>
     <string name="msg_root_timeout">Этот шаг шёл слишком долго. Перезапустите проектор и попробуйте снова.</string>
     <string name="msg_root_failed">Этот шаг остановился (%1$s).</string>
-    <string name="msg_no_trial_tool">Эта прошивка XGIMI не умеет запускать пробную систему. Ничего не изменилось.</string>
-    <string name="msg_ota_pending">Обновление XGIMI ещё не закончено. Перезапустите проектор один раз и оставьте его включённым в системе XGIMI минут на 20. Потом снова откройте Lumen Installer.</string>
-    <string name="msg_trial_installed">Пробный запуск Lumen OS %1$s уже готов на этом проекторе. Чтобы поставить новую версию, нажмите «Поставить новую пробу».</string>
-    <string name="msg_trial_installed_other">На проекторе уже есть другая пробная система. Сначала удалите её.</string>
+    <string name="msg_no_trial_tool">Эта прошивка XGIMI не умеет запускать Lumen OS Live. Ничего не изменилось.</string>
+    <string name="msg_ota_pending">Обновление XGIMI ещё не закончено. Перезапустите проектор один раз и оставьте его включённым в системе XGIMI минут на 20. Потом снова откройте Lumen OS Live.</string>
+    <string name="msg_trial_installed">Lumen OS Live %1$s уже готова на этом проекторе. Чтобы поставить новую версию, нажмите «Подготовить новую Lumen OS Live».</string>
+    <string name="msg_trial_installed_other">На проекторе уже есть другая временная система. Сначала удалите её.</string>
     <string name="msg_check_ok_leftovers">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть. Прошлое обновление XGIMI оставило в памяти проектора около %2$s МБ своих служебных файлов. Обычно установка убирает их сама, делать ничего не нужно.</string>
-    <string name="msg_check_ok_leftovers_kept">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть. Прошлое обновление XGIMI оставило в памяти проектора около %2$s МБ своих рабочих файлов. Эта версия Lumen OS их не убирает, поэтому установить её из пробного запуска на этом проекторе нельзя. Пробный запуск работает. Как только появится сборка, которая их убирает, Lumen Installer предложит установку здесь.</string>
+    <string name="msg_check_ok_leftovers_kept">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть. Прошлое обновление XGIMI оставило в памяти проектора около %2$s МБ своих рабочих файлов. Эта версия Lumen OS их не убирает, поэтому установить её из Lumen OS Live на этом проекторе нельзя. Lumen OS Live работает. Как только появится сборка, которая их убирает, это приложение предложит установку здесь.</string>
     <string name="msg_leftovers_stick">Прошлое обновление XGIMI оставило в памяти проектора около %1$s МБ своих служебных файлов, и с ними что-то необычно, поэтому Lumen OS их убирать не будет. Сначала верните систему XGIMI флешкой восстановления, потом сразу возвращайтесь сюда. Как сделать флешку, написано в инструкции на странице проекта.</string>
     <string name="msg_check_ok">Всё в порядке. Нужно около %1$s ГБ свободного места, и оно есть.</string>
     <string name="msg_net_failed">Не удалось связаться с Lumen OS в интернете (%1$s).</string>
@@ -72,22 +72,22 @@
     <string name="msg_downloaded">Скачано, %1$s МБ.</string>
     <string name="msg_sha_mismatch">Скачанное не прошло проверку подлинности и удалено. Нажмите «Продолжить», чтобы скачать заново.</string>
     <string name="msg_verified">Проверка подлинности пройдена.</string>
-    <string name="msg_handover_yes">Эта версия умеет устанавливаться из пробного запуска. Выберите «Установить» внутри пробного запуска.</string>
-    <string name="msg_handover_no">Lumen OS %1$s пока не умеет устанавливаться из пробного запуска. Проба покажет Lumen OS. Как только появится сборка с установкой, Lumen Installer предложит её здесь.</string>
-    <string name="msg_prepared">Lumen OS подготовлена к пробному запуску.</string>
+    <string name="msg_handover_yes">Эта версия умеет устанавливаться из Lumen OS Live. Выберите «Установить» внутри Lumen OS Live.</string>
+    <string name="msg_handover_no">Lumen OS %1$s пока не умеет устанавливаться из Lumen OS Live. В Lumen OS Live можно посмотреть Lumen OS. Как только появится сборка с установкой, это приложение предложит её здесь.</string>
+    <string name="msg_prepared">Lumen OS Live подготовлена.</string>
     <string name="msg_prepare_failed">Подготовка остановилась (%1$s).</string>
-    <string name="msg_trial_only">На %1$s Lumen OS уже можно попробовать. Установка насовсем на этой модели пока закрыта, установщик внутри пробного запуска скажет об этом.</string>
+    <string name="msg_trial_only">На %1$s уже работает Lumen OS Live. Установка насовсем на этой модели пока закрыта. Lumen OS скажет об этом внутри Lumen OS Live.</string>
     <string name="msg_not_ready">Сначала выполните предыдущие шаги.</string>
-    <string name="msg_start_failed">Пробный запуск не настроен (%1$s). Ничего не осталось. Следующий перезапуск вернёт систему XGIMI.</string>
-    <string name="msg_started">Пробный запуск готов. Перезапустите проектор, и Lumen OS запустится один раз.</string>
-    <string name="msg_removed">Пробный запуск удалён.</string>
-    <string name="msg_remove_failed">Пробный запуск не удалён (%1$s).</string>
+    <string name="msg_start_failed">Lumen OS Live не настроена (%1$s). Ничего не осталось. Следующий перезапуск вернёт систему XGIMI.</string>
+    <string name="msg_started">Lumen OS Live готова. Перезапустите проектор, и Lumen OS запустится один раз.</string>
+    <string name="msg_removed">Lumen OS Live удалена.</string>
+    <string name="msg_remove_failed">Lumen OS Live не удалена (%1$s).</string>
     <string name="msg_rebooting">Перезапускаем.</string>
     <string name="msg_reboot_failed">Проектор не перезапустился. Попробуйте снова.</string>
     <string name="msg_stopped">Пауза. Нажмите «Продолжить».</string>
     <string name="msg_error">Что-то пошло не так (%1$s).</string>
 
-    <string name="confirm_trial_only">На %1$s это только проба. Установка насовсем на этой модели пока закрыта.</string>
+    <string name="confirm_trial_only">На %1$s это только Lumen OS Live. Установка насовсем на этой модели пока закрыта.</string>
     <string name="confirm_space">Нужно места в памяти проектора: %1$s ГБ. Свободно: %2$s ГБ.</string>
 
     <!-- About (the round "i") -->
@@ -96,19 +96,19 @@
     <string name="about_device_title">Этот проектор</string>
     <string name="about_device">Проектор: %1$s (%2$s)</string>
     <string name="about_stock">Прошивка XGIMI: %1$s</string>
-    <string name="about_lumen">Lumen OS для пробы: %1$s</string>
-    <string name="about_lumen_unknown">Lumen OS для пробы: ещё не проверено</string>
-    <string name="about_installer">Lumen Installer %1$s</string>
+    <string name="about_lumen">Lumen OS Live: %1$s</string>
+    <string name="about_lumen_unknown">Lumen OS Live: ещё не проверено</string>
+    <string name="about_installer">Lumen OS Live %1$s</string>
     <string name="about_what_title">Что произойдёт</string>
-    <string name="about_what_1">Lumen OS запустится один раз, на пробу, из файлов в памяти проектора. Система XGIMI и ваши файлы останутся как есть.</string>
-    <string name="about_what_2">Внутри пробного запуска можно выбрать «Установить», чтобы оставить Lumen OS. Только этот шаг один раз стирает всё на проекторе, и он сначала спрашивает.</string>
-    <string name="about_what_3">Перед использованием установщик проверяет, что каждый файл Lumen OS действительно от проекта Lumen OS.</string>
+    <string name="about_what_1">Lumen OS запустится один раз как Lumen OS Live, из файлов в памяти проектора. Система XGIMI и ваши файлы останутся как есть.</string>
+    <string name="about_what_2">Внутри Lumen OS Live можно выбрать «Установить», чтобы оставить Lumen OS. Только этот шаг один раз стирает всё на проекторе, и он сначала спрашивает.</string>
+    <string name="about_what_3">Перед использованием приложение проверяет, что каждый файл Lumen OS действительно от проекта Lumen OS.</string>
     <string name="about_back_title">Как вернуться назад</string>
-    <string name="about_back_1">Во время пробы просто перезапустите проектор. Он вернётся к системе XGIMI.</string>
-    <string name="about_back_2">Здесь можно удалить пробный запуск, чтобы освободить место.</string>
+    <string name="about_back_1">В Lumen OS Live просто перезапустите проектор. Он вернётся к системе XGIMI.</string>
+    <string name="about_back_2">Здесь можно удалить Lumen OS Live, чтобы освободить место.</string>
     <string name="about_back_3">После установки систему XGIMI возвращает флешка восстановления XGIMI для этой модели. Как это сделать, написано в инструкции на странице проекта.</string>
     <string name="about_lic_title">Лицензии</string>
-    <string name="about_lic_installer">Lumen Installer и Lumen OS: Apache License 2.0.</string>
+    <string name="about_lic_installer">Lumen OS Live и Lumen OS: Apache License 2.0.</string>
     <string name="about_lic_aosp">Android (AOSP) и LineageOS: Apache License 2.0 и другие открытые лицензии.</string>
     <string name="about_lic_font">Шрифт Onest: SIL Open Font License 1.1.</string>
     <string name="about_lic_icons">Значки Material Symbols от Google: Apache License 2.0.</string>
@@ -124,10 +124,10 @@
     <string name="msg_catalog_loading">Ищем сборки Lumen OS для этого проектора.</string>
     <string name="msg_catalog_bad_sig">Список сборок Lumen OS не прошёл проверку подлинности. Ничего не изменилось.</string>
     <string name="msg_catalog_bad">Список сборок Lumen OS повреждён (%1$s). Ничего не изменилось.</string>
-    <string name="msg_catalog_old">Этот список сборок Lumen OS устарел (%1$s). У установщика уже есть более новый (%2$s). Ничего не изменилось.</string>
+    <string name="msg_catalog_old">Этот список сборок Lumen OS устарел (%1$s). У приложения уже есть более новый (%2$s). Ничего не изменилось.</string>
     <string name="msg_catalog_note">%1$s</string>
-    <string name="msg_catalog_offline">Сейчас нет интернета. Установщик показывает список сборок, сохранённый %1$s.</string>
-    <string name="msg_no_build">В Lumen Installer пока нет Lumen OS для этого проектора (%1$s). Новые сборки появляются здесь: %2$s</string>
+    <string name="msg_catalog_offline">Сейчас нет интернета. Приложение показывает список сборок, сохранённый %1$s.</string>
+    <string name="msg_no_build">Для этого проектора пока нет Lumen OS (%1$s). Новые сборки появляются здесь: %2$s</string>
     <string name="msg_catalog_mismatch">Выпуск Lumen OS не совпадает со списком сборок (%1$s). Ничего не скачано.</string>
     <string name="opt_version_stable">Версия: стабильная %1$s</string>
     <string name="opt_version_beta">Версия: бета %1$s</string>
@@ -137,7 +137,7 @@
 
     <!-- установленная Lumen OS, чьё приложение обновления исправляет подписанный список (1.0.6) -->
     <string name="msg_app_update_offered">На этом проекторе работает Lumen OS %1$s. Приложению «Обновление Lumen OS» нужно исправление, без него оно не ставит новые версии. Нажмите «Обновить Lumen OS». Приложения, настройки и файлы останутся как есть.</string>
-    <string name="msg_app_update_confirm">Подтвердите обновление на открывшемся экране. Если проектор спросит, можно ли Lumen Installer устанавливать приложения, разрешите и вернитесь назад.</string>
+    <string name="msg_app_update_confirm">Подтвердите обновление на открывшемся экране. Если проектор спросит, можно ли Lumen OS Live устанавливать приложения, разрешите и вернитесь назад.</string>
     <string name="msg_app_updated">«Обновление Lumen OS» исправлено. Нажмите «Открыть Обновление Lumen OS», затем «Загрузить и установить». Новая Lumen OS придёт через интернет, данные сохранятся.</string>
     <string name="msg_app_update_bad">Скачанный файл не подходит этому проектору (%1$s). Он удалён. Ничего не изменилось.</string>
     <string name="msg_app_update_failed">«Обновление Lumen OS» не исправлено (%1$s). Больше ничего не изменилось. Нажмите «Обновить Lumen OS», чтобы попробовать снова.</string>
@@ -145,9 +145,9 @@
     <string name="btn_open_updater">Открыть Обновление Lumen OS</string>
     <string name="btn_busy_app_update">Обновляется…</string>
     <!-- версия прошивки, которой нет в списке для известной модели: пробу можно запустить всё равно -->
-    <string name="force_trial">Запустить пробную версию всё равно</string>
-    <string name="force_warning">Эта версия прошивки XGIMI у нас не проверена. Пробный запуск может пройти без звука или с тёмным экраном. Перезапуск проектора вернёт обычную систему. Установить Lumen OS насовсем с этой версии нельзя.</string>
-    <string name="msg_forced">Версия %1$s не проверена. Пробный запуск %2$s возможен на ваш риск.</string>
+    <string name="force_trial">Запустить Lumen OS Live всё равно</string>
+    <string name="force_warning">Эта версия прошивки XGIMI у нас не проверена. Lumen OS Live может пройти без звука или с тёмным экраном. Перезапуск проектора вернёт обычную систему. Установить Lumen OS насовсем с этой версии нельзя.</string>
+    <string name="msg_forced">Версия %1$s не проверена. Запуск Lumen OS Live %2$s возможен на ваш риск.</string>
     <!-- сведения о системе, которые пользователь может нам отправить -->
     <string name="btn_dump">Отправить сведения</string>
     <string name="btn_busy_dump">Отправляем…</string>

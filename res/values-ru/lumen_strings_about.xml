@@ -26,5 +26,4 @@
     <string name="lumen_about_guide_files">Официальные файлы XGIMI перечислены в инструкции на странице проекта.</string>
     <string name="lumen_about_erases">Флешка стирает всё на проекторе: приложения, аккаунты, настройки и файлы.</string>
     <string name="lumen_about_scan">Отсканируйте телефоном, чтобы открыть</string>
-    <string name="lumen_about_close">Закрыть</string>
 </resources>

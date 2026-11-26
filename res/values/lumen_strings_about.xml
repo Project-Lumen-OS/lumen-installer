@@ -27,5 +27,4 @@
     <string name="lumen_about_guide_files">The guide on the project page lists the official XGIMI files.</string>
     <string name="lumen_about_erases">The stick erases everything on the projector: apps, accounts, settings and files.</string>
     <string name="lumen_about_scan">Scan with a phone to open</string>
-    <string name="lumen_about_close">Close</string>
 </resources>

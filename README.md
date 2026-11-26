@@ -1,4 +1,4 @@
-# Lumen Installer
+# Lumen OS Live
 
 An app for XGIMI projectors that brings [Lumen OS](https://github.com/Project-Lumen-OS/lumen-os) to the projector
 over the network, without a computer and without a USB cable. It reads the projector's model and looks it up in the signed list of Lumen OS builds. If a build
@@ -14,13 +14,13 @@ way to install it. The XGIMI Play 6 is the one exception: it still installs with
 ## Supported projectors
 
 <!-- models:installer:begin -->
-| Projector | Model code | What Lumen Installer offers |
+| Projector | Model code | What Lumen OS Live offers |
 |---|---|---|
 | XGIMI Z9X | G0082 | Lumen OS Live, Install Lumen OS permanently |
 | XGIMI Z9X HB | G0130, G0148 | Lumen OS Live, Install Lumen OS permanently |
 | XGIMI X50 Ultra | G0111 | Lumen OS Live, Install Lumen OS permanently |
 | XGIMI X50 Ultra Max | G0100 | Lumen OS Live, Install Lumen OS permanently |
-| XGIMI Play 6 | G0058 | With a computer, not with Lumen Installer |
+| XGIMI Play 6 | G0058 | With a computer, not with Lumen OS Live |
 | XGIMI AURA 3 Max | G0104 | Lumen OS Live only |
 | XGIMI MIRA 4K | G0109 | Lumen OS Live only |
 | XGIMI MIRA 4K Pro | G0110 | Lumen OS Live only |
@@ -46,12 +46,12 @@ way to install it. The XGIMI Play 6 is the one exception: it still installs with
 
 ## Install the app
 
-1. Download the Lumen Installer file that ends in `.apk1` from the [latest release](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest)
+1. Download the Lumen OS Live file that ends in `.apk1` from the [latest release](https://github.com/Project-Lumen-OS/lumen-installer/releases/latest)
    and copy it to a USB stick (FAT32 or exFAT). The stick only carries the app.
 2. Plug the stick into the projector, open the file in the XGIMI file manager and confirm.
-3. Connect the projector to the internet, open Lumen Installer and follow the screen.
+3. Connect the projector to the internet, open Lumen OS Live and follow the screen.
 
-The app updates over any earlier Lumen Installer. Which projectors and firmware versions get Lumen OS is decided by
+The app updates over any earlier Lumen OS Live. Which projectors and firmware versions get Lumen OS is decided by
 the signed list of builds on the [index release](https://github.com/Project-Lumen-OS/lumen-installer/releases/tag/index),
 made from the published [Lumen OS releases](https://github.com/Project-Lumen-OS/lumen-os/releases), not by the app.
 When a build for a new projector is published, the same app offers it. A projector without a build is not touched.

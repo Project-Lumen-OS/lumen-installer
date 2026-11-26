@@ -82,6 +82,7 @@ public final class ParallelDownload {
     private static final double GAIN = 1.10;
     private static final int RESETS = 2;
     private static final int BUF = 256 << 10;
+    private static final long IDLE_MS = 250;
 
     private final Opener opener;
     private final ThreadFactory threads;
@@ -344,9 +345,15 @@ public final class ParallelDownload {
         private void work() {
             byte[] buf = new byte[BUF];
             int fails = 0;
+            long bytes = 0, busy = 0;
             while (!abort) {
-                Segments.Seg s = segs.claim();
-                if (s == null) return;
+                Segments.Seg s = segs.claim(now(), busy == 0 ? 0 : bytes * 1000 / busy);
+                if (s == null) {
+                    if (!ranges || segs.complete()) return;
+                    pause(IDLE_MS);     // the last ranges: stay to take over the rest of one that turns out slow
+                    continue;
+                }
+                long t = now();
                 try {
                     fetch(s, buf);
                     fails = 0;
@@ -364,6 +371,8 @@ public final class ParallelDownload {
                     // the first refusal of a link that was just renewed goes on at once, every other failure waits longer
                     pause(e instanceof Renewed && fails == 1 ? 0 : Math.min(15000, 500L << Math.min(fails, 5)));
                 } finally {
+                    bytes += segs.got(s);
+                    busy += now() - t;
                     segs.release(s);
                 }
             }
