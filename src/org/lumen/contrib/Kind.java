@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 package org.lumen.contrib;
 
 /** What a unit tells the contribution base about. */

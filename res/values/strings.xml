@@ -114,7 +114,7 @@
     <string name="about_back_2">Remove Lumen OS Live here to free the space again.</string>
     <string name="about_back_3">After an install, the XGIMI recovery USB stick for this model brings the XGIMI system back. The guide on the project page shows how.</string>
     <string name="about_lic_title">Licenses</string>
-    <string name="about_lic_installer">Lumen OS Live and Lumen OS: Apache License 2.0.</string>
+    <string name="about_lic_installer">Lumen OS Live and Lumen OS: PolyForm Noncommercial License 1.0.0.</string>
     <string name="about_lic_aosp">Android (AOSP) and LineageOS: Apache License 2.0 and other open source licenses.</string>
     <string name="about_lic_font">Onest font: SIL Open Font License 1.1.</string>
     <string name="about_lic_icons">Material Symbols icons by Google: Apache License 2.0.</string>

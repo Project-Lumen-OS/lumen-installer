@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 package org.lumen.installer.core;
 
 import java.security.cert.X509Certificate;

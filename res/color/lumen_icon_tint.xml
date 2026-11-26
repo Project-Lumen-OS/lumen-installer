@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: Apache-2.0
+<!-- SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
      The colour of a lumen_ic_* icon by the state of the row it sits in (the Lumen tokens, org.lumen.ui.Tokens):
      disabled = OFF_TEXT, focused (white text on the accent row) = white, otherwise the TITLE text colour. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">

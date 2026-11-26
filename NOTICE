@@ -1,0 +1,16 @@
+Lumen Installer (Lumen OS Live)
+Required Notice: Copyright (c) 2026 Kamal Muradov (https://lumen-os.net)
+
+Lumen OS is an independent project for XGIMI projectors. It is not affiliated with, endorsed by or
+sponsored by XGIMI, Google, MediaTek or the LineageOS project. "XGIMI", "Android", "Google" and
+"LineageOS" are trademarks of their respective owners.
+
+Licensing of this repository:
+  - The own code of Kamal Muradov is licensed under the PolyForm Noncommercial License 1.0.0 (LICENSE, https://polyformproject.org/licenses/noncommercial/1.0.0),
+    SPDX identifier LicenseRef-PolyForm-Noncommercial-1.0.0. Its source files say so on one of their first lines.
+  - Files written by other people keep their own licences. THIRD_PARTY_NOTICES.md lists them
+    (Material Symbols icons, Apache-2.0, LICENSES/Apache-2.0.txt).
+  - From 26 November 2026 on, this licence covers the whole repository, its earlier commits and
+    releases included, in every copy given out. Copies obtained under the Apache License 2.0 before
+    that day keep the rights that licence gave.
+  - The names "Lumen OS", "Lumen OS Live" and "Lumen Premium" and the Lumen logo: TRADEMARKS.md.

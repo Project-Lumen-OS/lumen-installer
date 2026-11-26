@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 package org.lumen.installer.core;
 
 /** what a stock XGIMI update left, as StockUpdate.judge reads the root probe */

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 package org.lumen.contrib;
 
 /** The card the app shows after a call, one per state (the texts belong to the app). */

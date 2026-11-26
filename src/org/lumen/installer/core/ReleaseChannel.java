@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 package org.lumen.installer.core;
 
 /** which build a download reads ("Version: Stable / Beta", remembered in the state file): the catalog's stable build of

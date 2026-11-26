@@ -108,7 +108,7 @@
     <string name="about_back_2">Здесь можно удалить Lumen OS Live, чтобы освободить место.</string>
     <string name="about_back_3">После установки систему XGIMI возвращает флешка восстановления XGIMI для этой модели. Как это сделать, написано в инструкции на странице проекта.</string>
     <string name="about_lic_title">Лицензии</string>
-    <string name="about_lic_installer">Lumen OS Live и Lumen OS: Apache License 2.0.</string>
+    <string name="about_lic_installer">Lumen OS Live и Lumen OS: PolyForm Noncommercial License 1.0.0.</string>
     <string name="about_lic_aosp">Android (AOSP) и LineageOS: Apache License 2.0 и другие открытые лицензии.</string>
     <string name="about_lic_font">Шрифт Onest: SIL Open Font License 1.1.</string>
     <string name="about_lic_icons">Значки Material Symbols от Google: Apache License 2.0.</string>

@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 # lumen_installer.sh: the root side of Lumen Installer, one job per run.
 #
 # How it runs: the app copies this file and job.conf into its own files dir, sets

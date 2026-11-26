@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 # build_apk.sh: build a signed APK with the Android SDK command line tools only (no Gradle).
 #
 #   KEY_PK8=key.pk8 KEY_PEM=key.x509.pem sh tools/build_apk.sh APP_DIR OUT_APK

@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 # build.sh: build the installable Lumen Installer APK.
 #
 #   sh build.sh [OUT_APK]        default: build/LumenInstaller.apk

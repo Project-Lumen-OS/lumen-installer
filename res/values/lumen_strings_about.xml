@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0 -->
 <!-- lumen-about: the system Settings About rows (model code, firmware versions, Back to the XGIMI system), the same rows in Lumen Installer and the Back to the XGIMI system screen. Scan and close are the updater's about_scan and the report screen's close, the firmware word and the intro LumenDsuInstall's about_stock and about_back_2. -->
 <resources>
     <string name="lumen_about_model_code">Model code</string>

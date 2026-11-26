@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 package org.lumen.contrib;
 
 /** Lowercase hex and base64url without padding, the two encodings of the wire. */

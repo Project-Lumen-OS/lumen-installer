@@ -65,4 +65,20 @@ official one.
 
 ## License
 
-Apache License 2.0, see [LICENSE](LICENSE). The Onest font (SIL Open Font License 1.1) is downloaded at build time.
+<!-- licence:begin -->
+Lumen Installer is the work of Kamal Muradov. Its own code is under the [PolyForm Noncommercial License 1.0.0](LICENSE). In plain words:
+
+- You may use it for free at home, for study, as a hobby and in non-profit organisations such as schools and
+  charities.
+- You may change it for yourself and learn from it.
+- You may share the official builds unchanged, together with the licence and the [NOTICE](NOTICE).
+- You may not use it for anything commercial: no selling it, no paid installation, no use in a business, no paid
+  add-ons or services built on it.
+
+This licence covers the whole repository, its earlier versions included. Copies obtained under the Apache License
+2.0 before 26 November 2026 keep the rights that licence gave.
+
+Parts written by other people keep their own licences (Apache 2.0 for the Material Symbols icons): [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The name and the logo: [TRADEMARKS.md](TRADEMARKS.md).
+
+This is a short summary. The licence text in [LICENSE](LICENSE) is what counts.
+<!-- licence:end -->
