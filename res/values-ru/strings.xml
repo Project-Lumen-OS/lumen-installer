@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ui_lang">ru</string>
-    <string name="app_name">Lumen OS Live</string>
-    <string name="title">Lumen OS Live</string>
     <string name="working">Готовим Lumen OS Live</string>
     <string name="versions_title">Версии прошивки</string>
     <string name="device_line">%1$s (%2$s), прошивка XGIMI %3$s</string>

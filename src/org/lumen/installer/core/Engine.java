@@ -919,10 +919,13 @@ public final class Engine {
         if (!spkg.isEmpty()) job.put("SETTINGS_PKG", spkg);
         Root.Result r = det == null || dumpAllowed(det) ? runRoot(job, cfg.dumpTimeoutMs) : null;
         boolean rooted = r != null && r.done;
-        File rd = rooted ? new File(r.kv("dump_dir")) : null;
+        // the script names its folder first: a job that did not end in time still gives what it wrote so far
+        boolean partial = !rooted && r != null && r.started && !r.failed && !r.kv("dump_dir").isEmpty();
+        File rd = rooted || partial ? new File(r.kv("dump_dir")) : null;
         Map<String, String> all = new java.util.HashMap<>(p);
         String settingsText = "";
-        if (rooted && rd.isDirectory() && under(rd, dir)) {
+        int[] ran = { -1, 0 };
+        if (rd != null && rd.isDirectory() && under(rd, dir)) {
             File[] list = rd.listFiles();
             if (list != null) {
                 Arrays.sort(list);
@@ -933,6 +936,8 @@ public final class Engine {
                     try {   // root's getprop sees what an app may not (the serial): its values feed the Scrubber too
                         if (n.equals("getprop.txt")) all.putAll(Props.parse(StockDump.read(f, 8 << 20)));
                         if (n.equals("settings.txt")) settingsText = StockDump.read(f, 8 << 20);
+                        if (n.equals("commands.txt")) ran[0] = rootLines(StockDump.read(f, 1 << 20), "^[a-z0-9_]+ rc=-?[0-9]+ .*");
+                        if (n.equals("errors.txt")) ran[1] = rootLines(StockDump.read(f, 1 << 20), "^[a-z0-9_]+ rc=-?[0-9]+: .*");
                     } catch (IOException e) {
                         l.log("dump: " + n + ": " + e.getMessage());
                     }
@@ -942,6 +947,9 @@ public final class Engine {
             l.message(Msg.DUMP_NO_ROOT);
             if (r != null) l.log("dump: root part not made (" + (r.failed ? r.failCode + " " + r.failDetail : "no answer") + ")");
         }
+        if (partial) l.log("dump: the root job did not end in " + cfg.dumpTimeoutMs / 1000 + " s, " + Math.max(ran[0], 0) + " commands kept");
+        // what the app saw of the root job, always: an empty or missing root part carries its reason
+        items.add(StockDump.Item.text("app/root_job.txt", rootJobText(r, rooted, partial)));
         String serial = Props.get(all, "ro.serialno");
         if (serial.isEmpty()) serial = Props.get(all, "ro.boot.serialno");
         StringBuilder sum = new StringBuilder("Lumen Installer stock system info (format 2)\n");
@@ -950,7 +958,8 @@ public final class Engine {
                 .append("installer: ").append(cfg.appVersion).append('\n')
                 .append("verdict: ").append(det == null ? "-" : det.verdict).append('\n')
                 .append("catalog: ").append(det == null ? 0 : det.catalogSerial).append('\n')
-                .append("root: ").append(rooted ? "yes" : "no").append('\n')
+                .append("root: ").append(rooted ? "yes" : partial ? "partial (the job did not end in time)" : "no").append('\n')
+                .append("root commands: ").append(ran[0] < 0 ? "-" : ran[0] + " run, " + ran[1] + " failed or empty (root/errors.txt)").append('\n')
                 .append("settings app: ").append(spkg.isEmpty() ? "-" : spkg).append(" (").append(apks).append(" bytes, ")
                 .append(spkg.isEmpty() ? "-" : known ? "not sent: the catalog knows this firmware" : "sent without media").append(")\n")
                 .append("made: ").append(day(System.currentTimeMillis() / 1000)).append('\n')
@@ -978,6 +987,25 @@ public final class Engine {
         } finally {
             if (rd != null && under(rd, dir)) deleteTree(rd);
         }
+    }
+
+    /** lines of a root list file that match the pattern (commands.txt: one per table line, errors.txt: one per failure) */
+    static int rootLines(String text, String pattern) {
+        int n = 0;
+        for (String line : text.split("\n")) if (line.matches(pattern)) n++;
+        return n;
+    }
+
+    /** the root job as the app saw it: started, how it ended, its KV and LOG lines (app/root_job.txt of the dump) */
+    static String rootJobText(Root.Result r, boolean rooted, boolean partial) {
+        StringBuilder b = new StringBuilder("root job: dump\n");
+        if (r == null) return b.append("not run: no root route on this system\n").toString();
+        b.append("started: ").append(r.started ? "yes" : "no (no answer from the root route)").append('\n');
+        b.append("ended: ").append(rooted ? "done" : r.failed ? "failed " + r.failCode + " " + r.failDetail
+                : partial ? "no end in time, the files so far are kept" : "no end").append('\n');
+        for (Map.Entry<String, String> e : r.kv.entrySet()) b.append("KV ").append(e.getKey()).append('=').append(e.getValue()).append('\n');
+        for (String line : r.log) b.append("LOG ").append(line).append('\n');
+        return b.toString();
     }
 
     static boolean under(File f, File root) {

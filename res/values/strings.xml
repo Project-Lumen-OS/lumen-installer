@@ -4,10 +4,8 @@
   A host test checks every message in English and Russian with its arguments.
 -->
 <resources>
-    <string name="app_name">Lumen OS Live</string>
     <!-- the language of this folder: the catalog notes are read in it, so the screen shows one language only -->
     <string name="ui_lang">en</string>
-    <string name="title">Lumen OS Live</string>
     <string name="working">Getting Lumen OS Live ready</string>
     <!-- the card Firmware versions under the steps (its rows are the texts of apps/core/lumen-about) -->
     <string name="versions_title">Firmware versions</string>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Not translated: the product name, the same in every language (launcher label and title). -->
+<resources>
+    <string name="app_name" translatable="false">Lumen OS Live</string>
+    <string name="title" translatable="false">Lumen OS Live</string>
+</resources>

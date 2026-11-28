@@ -20,9 +20,11 @@
 #   reboot   sync + reboot (only when the user pressed Restart)
 #   dump     read only: the stock system info the user agreed to send (a few MB in the zip, the app adds the stock
 #            settings app without its media for a firmware the catalog does not know). Runs every line of dump_table below (getprop, the partition table, dumpsys of every
-#            service we study a unit with, pm lists, logcat -b all, /proc and /sys reads, the vendor and XGIMI config
+#            service we study a unit with, pm lists, logcat -b all and the last boot's log, dmesg, lpdump and the super
+#            metadata, slots, the trial's and update_engine's state, recovery logs, /proc and /sys reads, the vendor and XGIMI config
 #            text files, the stock settings app's own settings), one output file each in $HERE/dump (capped, readable
-#            by the app), plus commands.txt (name, exit code, bytes, seconds, command). SETTINGS_PKG: the stock settings
+#            by the app), plus commands.txt (name, exit code, bytes, seconds, command) and errors.txt (every line that
+#            failed, ran out of time or gave nothing, with its last output lines). SETTINGS_PKG: the stock settings
 #            app the app found (its settings files are read). Partition CONTENT is read only for the sha256 of the A/B
 #            firmware partitions of DUMP_HASH (an XGIMI update writes them the same on every unit); a partition in one
 #            copy (persist, uenv, tvcertificate, xgimicri, xgimisps, xgimidatabase, project_id ...) is the unit's own
@@ -48,6 +50,8 @@ SYSBLOCK=${LI_SYSBLOCK:-/sys/class/block}
 XGIMICONFIG=${LI_XGIMICONFIG:-/mnt/vendor/xgimiconfig}
 MAPPER=${LI_MAPPER:-/dev/block/mapper}
 MOUNTS=${LI_MOUNTS:-/proc/mounts}
+CACHE=${LI_CACHE:-/cache}
+PSTORE=${LI_PSTORE:-/sys/fs/pstore}
 
 # The script knows no model: which models may take a trial is the signed list of projectors' (checked by the app).
 # A write job carries the model code the app checked (MODEL) and runs only on a projector that reports that code.
@@ -249,6 +253,8 @@ reboot)
 dump)
   D=$HERE/dump
   rm -rf "$D"; mkdir -p "$D" && chmod 777 "$D" || fail dump_dir "$D"
+  # said first: the app takes what is there even when the job does not end in its time
+  kv dump_dir "$D"
   T=; have timeout && T="timeout 120"
   case "$J_SETTINGS_PKG" in *[!A-Za-z0-9._]*|.*|*..*) J_SETTINGS_PKG= ;; esac
   # what never leaves: Wi-Fi, accounts, keys, DRM, HDCP, calibration (a name with one of these is never read)
@@ -260,25 +266,39 @@ deviceidle display dropbox gfxinfo gpu hardware_properties hdmi_control input in
 media.audio_flinger media.audio_policy media.camera media.extractor media.player media.resource_manager
 media_router media_session meminfo overlay package power role sensorservice SurfaceFlinger thermalservice tv_input
 uimode usb webviewupdate window diskstats devicestoragemonitor color_display media.metrics statusbar'
-  # one line per output file: name|command (the command runs under sh -c, its output is capped by cap_of)
+  # one line per output file: name|command (the command runs under sh -c, its output is capped by cap_of). What a
+  # stock-side case needs most comes first (logs, partition table, trial and update state), so a dump that runs out
+  # of time still carries it. Written with printf, not a here-document (a shell writes those to a temp file, and the
+  # root route may have no /tmp).
   dump_table() {
-    # printf, not a here-document: a shell writes a here-document to a temp file first, and where the root route may not
-    # (no /tmp on Android, a TMPDIR it cannot write) the table came out empty: commands.txt of 0 bytes and no root
-    # file in every dump received up to Installer 1.0.9
     printf '%s\n' \
       'getprop|getprop' \
+      'root_env|@env' \
+      'logcat|logcat -d -b all -v threadtime' \
+      'logcat_last|logcat -L -d -b all -v threadtime' \
+      'pstore|@pstore' \
+      'dmesg|dmesg' \
       'partitions|cat /proc/partitions' \
       'by_name|@by_name' \
       'lpdump|lpdump' \
-      'slot_hashes|@slot_hashes' \
-      'mounts|cat /proc/mounts; echo; df -k; echo; cat /proc/swaps' \
+      'lpdump_all|lpdump --all' \
+      'lpdump_json|lpdump -j' \
+      'super_head|@super_head' \
+      'slots|for p in ro.boot.slot_suffix ro.boot.slot ro.virtual_ab.enabled ro.virtual_ab.retrofit ro.virtual_ab.compression.enabled ro.boot.dynamic_partitions ro.boot.dynamic_partitions_retrofit ro.boot.verifiedbootstate ro.boot.vbmeta.device_state ro.boot.bootreason sys.boot.reason persist.sys.boot.reason.history ro.product.ab_ota_partitions; do printf "%s=%s\n" "$p" "$(getprop $p)"; done' \
+      'bootctl|bootctl get-number-slots && bootctl get-current-slot && for s in 0 1; do printf "slot %s suffix %s bootable %s successful %s\n" "$s" "$(bootctl get-suffix $s)" "$(bootctl is-slot-bootable $s >/dev/null 2>&1; echo $?)" "$(bootctl is-slot-marked-successful $s >/dev/null 2>&1; echo $?)"; done; bootctl get-active-boot-slot; bootctl get-snapshot-merge-status' \
+      'gsi_status|gsi_tool status' \
+      'live|@live' \
+      'update_engine|@update_engine' \
+      'updates|ls -lR /metadata/ota /data/ota_package /data/misc/update_engine_log; for f in $(ls -t /data/misc/update_engine_log 2>/dev/null | head -2); do echo "== $f"; tail -c 1048576 "/data/misc/update_engine_log/$f"; done; echo; getprop | grep -E '\''ota|update|slot'\''' \
+      'recovery|@recovery' \
+      'df|df -k' \
+      'mounts|cat /proc/mounts; echo; cat /proc/swaps' \
       'cmdline|cat /proc/cmdline; echo; cat /proc/bootconfig' \
       'kernel|cat /proc/version; uname -a; echo; cat /proc/modules; echo; getenforce; echo; cat /proc/filesystems' \
+      'slot_hashes|@slot_hashes' \
       'cpu|cat /proc/cpuinfo; echo; cat /proc/meminfo; echo; cat /proc/loadavg /proc/uptime; for c in /sys/devices/system/cpu/cpu[0-9]*; do echo "$c $(cat $c/cpufreq/scaling_cur_freq $c/cpufreq/scaling_max_freq $c/cpufreq/scaling_governor 2>/dev/null | tr '\''\n'\'' '\'' '\'')"; done' \
       'proc|for f in interrupts devices iomem misc buddyinfo vmstat zoneinfo asound/cards asound/pcm asound/devices bus/input/devices; do echo "== /proc/$f"; cat /proc/$f; done' \
       'sys|@sys' \
-      'dmesg|dmesg' \
-      'logcat|logcat -d -b all -v threadtime' \
       'packages|pm list packages -f -U -i --show-versioncode; echo; echo disabled:; pm list packages -d; echo; pm list features; echo; pm list libraries; echo; pm list instrumentation' \
       'permissions|pm list permissions -g -f' \
       'services|service list; echo; dumpsys -l; echo; lshal; echo; lshal -itrpc --neat' \
@@ -295,8 +315,7 @@ uimode usb webviewupdate window diskstats devicestoragemonitor color_display med
       'xgimi_files|awk '\''$2 ~ /xgimi|tvconfig|tvservice/ {print $2}'\'' /proc/mounts | sort -u | while read -r m; do echo "== $m"; ls -lR "$m"; done' \
       'net|ip -br link; echo; ip link' \
       'audio_mixer|tinymix -D 0' \
-      'anr|ls -l /data/anr /data/tombstones; for f in $(ls -t /data/anr 2>/dev/null | head -4); do echo "== /data/anr/$f"; head -c 2097152 "/data/anr/$f"; done' \
-      'updates|ls -lR /metadata/ota /data/ota_package /data/misc/update_engine_log; for f in $(ls -t /data/misc/update_engine_log 2>/dev/null | head -2); do echo "== $f"; tail -c 1048576 "/data/misc/update_engine_log/$f"; done; echo; getprop | grep -E '\''ota|update|slot'\'''
+      'anr|ls -l /data/anr /data/tombstones; for f in $(ls -t /data/anr 2>/dev/null | head -4); do echo "== /data/anr/$f"; head -c 2097152 "/data/anr/$f"; done'
     for v in $DUMPSYS; do
       case "$v" in
         activity_*) echo "dumpsys_$v|dumpsys -t 60 activity ${v#activity_}" ;;
@@ -308,9 +327,27 @@ uimode usb webviewupdate window diskstats devicestoragemonitor color_display med
   cap_of() {   # bytes one output file may keep (its end)
     case "$1" in
       # the newest part of the log is what helps, configs and the package list a little more: a few MB in the zip
-      dumpsys_package|vendor_configs|tvconfig|xgimiconfig) echo 16777216 ;;
+      dumpsys_package|vendor_configs|tvconfig|xgimiconfig|logcat) echo 16777216 ;;
       *) echo 8388608 ;;
     esac
+  }
+  # who runs the table and with what: the shell, the path, the security context, the tools the table calls
+  dump_env() {
+    printf 'shell %s\nKSH_VERSION=%s\nPATH=%s\nTMPDIR=%s\nid %s\ncontext %s\nselinux %s\n' "$0" "${KSH_VERSION:-}" "$PATH" \
+      "${TMPDIR:-}" "$(id 2>&1)" "$(cat /proc/self/attr/current 2>/dev/null | tr -d '\0')" "$(getenforce 2>&1)"
+    for t in getprop logcat dmesg lpdump bootctl gsi_tool snapshotctl update_engine_client dumpsys pm settings service lshal \
+        df timeout base64 od dd sha256sum strings awk sed find tinymix ip ps; do
+      printf '%s %s\n' "$t" "$(command -v "$t" 2>/dev/null || echo 'NOT FOUND')"
+    done
+  }
+  # the kernel and Android logs the last boot left (pmsg is read by logcat -L)
+  dump_pstore() {
+    ls -la "$PSTORE" 2>&1
+    for f in "$PSTORE"/* /proc/last_kmsg; do
+      [ -f "$f" ] || continue
+      case "${f##*/}" in pmsg*) continue ;; esac
+      echo "== $f"; tail -c 2097152 "$f"; echo
+    done
   }
   # every by-name entry: name, target, size in KiB (no content)
   dump_by_name() {
@@ -319,6 +356,62 @@ uimode usb webviewupdate window diskstats devicestoragemonitor color_display med
       n=${e##*/}
       echo "$n $(readlink -f "$e" 2>/dev/null) $(blk_kib "$n" 2>/dev/null || echo ?)K"
     done
+  }
+  # the dynamic partition table as super keeps it, base64: the bytes from 0 to the end of the metadata area (4 KiB
+  # reserved, two geometry copies, a primary and a backup copy per slot; liblp's LpMetadataGeometry at 4096 has
+  # metadata_max_size and metadata_slot_count as its 11th and 12th 32-bit word). Never a byte of a partition.
+  dump_super_head() {
+    s=$BYNAME/super
+    [ -e "$s" ] || { echo "no $s"; return 1; }
+    g=$(dd if="$s" bs=4096 skip=1 count=1 2>/dev/null | od -An -tu4 -v | tr -s ' \n' '  ')
+    set -- $g
+    [ "${1:-}" = 1634485351 ] || { echo "no LP geometry at 4096 (first word ${1:-none})"; return 1; }
+    max=${11:-}; slots=${12:-}
+    case "$max:$slots" in *[!0-9:]*|:*|*:) echo "geometry unreadable: $max $slots"; return 1 ;; esac
+    [ "$max" -gt 0 ] && [ "$max" -le 1048576 ] && [ "$slots" -gt 0 ] && [ "$slots" -le 4 ] \
+      || { echo "geometry out of range: metadata_max_size $max slots $slots"; return 1; }
+    end=$((12288 + max * slots * 2))
+    printf 'super metadata: metadata_max_size %s slots %s, bytes 0-%s, base64\n' "$max" "$slots" "$end"
+    dd if="$s" bs=512 count=$((end / 512)) 2>/dev/null | base64
+  }
+  # the trial's state: its files and markers (names, sizes, short text files), the system props it keeps
+  dump_live() {
+    getprop | grep -E 'gsid|gsi\.|dsu'
+    for d in "$METADATA/gsi" "$DATA/gsi"; do echo "== ls -laR $d"; ls -laR "$d" 2>&1; done
+    find "$METADATA/gsi" -type f 2>/dev/null | sort | while read -r f; do
+      s=$(fsize "$f")
+      case "$s" in ''|*[!0-9]*) continue ;; esac
+      [ "${#s}" -gt 4 ] && { echo "== $f ($s bytes, left out)"; continue; }
+      echo "== $f"; od -c "$f" | head -40
+    done
+    [ -d "$METADATA/gsi" ]
+  }
+  # the A/B update state: update_engine's own status (10 s of --follow show the current state; it only listens),
+  # the snapshot state, update_engine's small prefs files
+  dump_update_engine() {
+    if have timeout; then
+      echo "== update_engine_client --follow (10 s)"; timeout 10 update_engine_client --follow 2>&1; echo "rc=$?"
+      echo "== snapshotctl dump"; timeout 30 snapshotctl dump 2>&1; echo "rc=$?"
+    fi
+    echo "== dumpsys android.os.UpdateEngineService"; dumpsys -t 10 android.os.UpdateEngineService 2>&1
+    echo "== ls -laR $DATA/misc/update_engine"; ls -laR "$DATA/misc/update_engine" 2>&1
+    for f in "$DATA"/misc/update_engine/prefs/*; do
+      [ -f "$f" ] && printf '%s=%s\n' "${f##*/}" "$(head -c 256 "$f" | tr '\n' ' ')"
+    done
+    [ -d "$DATA/misc/update_engine" ]
+  }
+  # what recovery and the stock updates left: the folders and the newest logs
+  dump_recovery() {
+    n=0
+    for d in "$CACHE/recovery" "$DATA/misc/recovery" "$DATA/cache/recovery"; do
+      [ -d "$d" ] || { echo "== $d: none"; continue; }
+      n=1
+      echo "== ls -la $d"; ls -la "$d" 2>&1
+      for f in "$d"/last_install* "$d"/last_log "$d"/last_log.1 "$d"/last_kmsg "$d"/last_locale "$d"/command "$d"/log; do
+        [ -f "$f" ] && { echo "== $f"; tail -c 1048576 "$f"; echo; }
+      done
+    done
+    [ "$n" = 1 ]
   }
   # the A/B firmware partitions only: sha256, and the kernel banner of boot
   DUMP_HASH="boot dtbo vbmeta vbmeta_system mboot bootdata tvconfig tvservice optee"
@@ -395,29 +488,56 @@ uimode usb webviewupdate window diskstats devicestoragemonitor color_display med
     text_files "$XGIMICONFIG/$m"
   }
   text_files_one() { case "$1" in *.ini|*.xml|*.json|*.txt|*.cfg|*.conf) echo "$1" | grep -qiE "$NEVER" || { echo "== $1"; head -c 524288 "$1"; echo; } ;; esac; }
-  : >"$D/commands.txt"
-  dump_table | while IFS= read -r line; do
-    name=${line%%|*}; cmd=${line#*|}
-    case "$name" in *[!a-z0-9_]*|'') continue ;; esac
+  # commands.txt: one line per table line (name, exit code, bytes, seconds, command); errors.txt: every line that
+  # failed, ran out of time, found no tool or gave nothing, with its last output lines, so a missing part has its
+  # reason in the dump. The table is read from a file, not a pipe, and split with a quoted | (mksh, the stock sh,
+  # reads an unquoted | in ${line%%|*} as "or": every name came out empty and every line was skipped, up to
+  # Installer 1.0.11). printf, not echo: mksh's echo turns the \n of a command into a line break.
+  C=$D/commands.txt; E=$D/errors.txt
+  : >"$C"; : >"$E"
+  dump_table >"$D/table.tmp" 2>>"$E"
+  while IFS= read -r line; do
+    name=${line%%"|"*}; cmd=${line#*"|"}
+    case "$name" in
+      *[!a-z0-9_]*|'') printf 'table line skipped (bad name): %s\n' "$line" >>"$E"; continue ;;
+    esac
     t0=$(date +%s 2>/dev/null)
     case "$cmd" in
-      @by_name) dump_by_name >"$D/$name.tmp" 2>&1; rc=$? ;;
-      @slot_hashes) dump_slot_hashes >"$D/$name.tmp" 2>&1; rc=$? ;;
-      @sys) dump_sys >"$D/$name.tmp" 2>&1; rc=$? ;;
-      @settings_app) dump_settings_app >"$D/$name.tmp" 2>&1; rc=$? ;;
-      @configs\ *) text_files ${cmd#@configs } >"$D/$name.tmp" 2>&1; rc=$? ;;
-      @tvconfig) dump_tvconfig >"$D/$name.tmp" 2>&1; rc=$? ;;
-      @xgimiconfig) dump_xgimiconfig >"$D/$name.tmp" 2>&1; rc=$? ;;
+      @env) dump_env >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @pstore) dump_pstore >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @by_name) dump_by_name >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @super_head) dump_super_head >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @live) dump_live >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @update_engine) dump_update_engine >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @recovery) dump_recovery >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @slot_hashes) dump_slot_hashes >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @sys) dump_sys >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @settings_app) dump_settings_app >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @configs\ *) text_files ${cmd#@configs } >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @tvconfig) dump_tvconfig >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @xgimiconfig) dump_xgimiconfig >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
+      @*) printf 'unknown table function\n' >"$D/$name.tmp"; rc=2 ;;
       *) $T sh -c "$cmd" >"$D/$name.tmp" 2>&1 </dev/null; rc=$? ;;
     esac
     tail -c "$(cap_of "$name")" "$D/$name.tmp" >"$D/$name.txt" 2>/dev/null
     rm -f "$D/$name.tmp"
     chmod 666 "$D/$name.txt" 2>/dev/null
     t1=$(date +%s 2>/dev/null)
-    echo "$name rc=$rc bytes=$(fsize "$D/$name.txt") s=$((${t1:-0} - ${t0:-0})) | $cmd" >>"$D/commands.txt"
-  done
-  chmod 666 "$D/commands.txt" 2>/dev/null
-  kv dump_dir "$D"
+    b=$(fsize "$D/$name.txt")
+    printf '%s rc=%s bytes=%s s=%s | %s\n' "$name" "$rc" "$b" "$((${t1:-0} - ${t0:-0}))" "$cmd" >>"$C"
+    why=
+    case "$rc" in
+      0) [ "${b:-0}" = 0 ] && why="no output" ;;
+      124) why="ran out of time (120 s)" ;;
+      126|127) why="tool not found or not runnable" ;;
+      *) why="exit code $rc" ;;
+    esac
+    [ -n "$why" ] && { printf '%s rc=%s: %s | %s\n' "$name" "$rc" "$why" "$cmd"; tail -n 4 "$D/$name.txt" 2>/dev/null | cut -c1-300 | sed 's/^/    /'; } >>"$E"
+  done <"$D/table.tmp"
+  rm -f "$D/table.tmp"
+  chmod 666 "$C" "$E" 2>/dev/null
+  kv dump_cmds "$(grep -c ' rc=' "$C" 2>/dev/null)"
+  kv dump_failed "$(grep -c '^[a-z0-9_]* rc=[0-9]*: ' "$E" 2>/dev/null)"
   kv dump_files "$(ls "$D" | wc -l | tr -d ' ')"
   done_
   ;;
